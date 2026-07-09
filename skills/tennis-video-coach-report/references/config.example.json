@@ -1,0 +1,14 @@
+{
+  "player_name": "Player",
+  "language": "zh-CN",
+  "level": "beginner",
+  "output_dir": "~/Tennis Reports",
+  "enable_pose": true,
+  "enable_slow_motion": true,
+  "enable_stroke_analysis": true,
+  "enable_kinetic_chain": true,
+  "target_strokes": ["forehand", "backhand", "serve"],
+  "enable_pdf": true,
+  "enable_png": true,
+  "report_title_template": "Tennis video review - {date}"
+}

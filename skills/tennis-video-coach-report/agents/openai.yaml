@@ -1,0 +1,4 @@
+interface:
+  display_name: "Tennis Video Coach Report"
+  short_description: "Analyze tennis videos with stroke phases, kinetic-chain coaching, rally clips, and shareable reports."
+  default_prompt: "Analyze this tennis practice video with tennis-video-coach-report. Split useful clips, identify the target stroke, break down stroke phases and kinetic-chain issues, then generate a Chinese coach-style HTML, PNG, and PDF report with evidence frames and slow-motion clips."
