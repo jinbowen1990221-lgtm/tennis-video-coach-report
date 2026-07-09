@@ -236,7 +236,7 @@ The default report visual style should be a blue mobile-first assessment report 
 - targeted review video or frame card clipped around the most representative problem moment
 - review video should prefer a clean clip without burned-in explanatory text; put the segment summary below the video as report copy
 - kinetic-chain labels on the top review card, covering footwork, hip/trunk transfer, arm release, and racket-head acceleration when visible
-- icon-led diagnosis focus cards for highlight, improvement, and next step; all icons inside colored circles should render in white
+- icon-led diagnosis focus cards for highlight, improvement, and next step; use the bundled `assets/icons/*.svg` card icons when available, and force all icons inside colored circles to render in white
 - ability radar and metric bars, including swing-speed release when evidence supports it
 - swing-speed analysis module with release score, acceleration/release/deceleration notes, and coaching implication
 - key moment cards tied to timestamps

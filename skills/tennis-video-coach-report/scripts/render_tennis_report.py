@@ -1058,7 +1058,40 @@ def scoring_note(data: dict) -> str:
     return "分数仅在视频动作证据可读时生成；证据不足的项目不应强行评分。"
 
 
+ICON_ASSET_FILES = {
+    "check": "亮点.svg",
+    "warn": "待改进.svg",
+    "next": "下一步.svg",
+    "insight": "风格.svg",
+    "route": "球路组织.svg",
+    "load": "风险.svg",
+}
+
+
+def asset_icon_svg(name: str) -> str:
+    icon_file = ICON_ASSET_FILES.get(name)
+    if not icon_file:
+        return ""
+    path = Path(__file__).resolve().parent.parent / "assets" / "icons" / icon_file
+    if not path.exists():
+        return ""
+    svg = path.read_text(encoding="utf-8").strip()
+    start = svg.find("<svg")
+    if start >= 0:
+        svg = svg[start:]
+    svg = svg.replace("<svg ", '<svg class="asset-icon" aria-hidden="true" ', 1)
+    for color in ("#333", "#333333", "black"):
+        svg = svg.replace(f'stroke="{color}"', 'stroke="currentColor"')
+        svg = svg.replace(f"stroke='{color}'", 'stroke="currentColor"')
+        svg = svg.replace(f'fill="{color}"', 'fill="currentColor"')
+        svg = svg.replace(f"fill='{color}'", 'fill="currentColor"')
+    return svg
+
+
 def icon_svg(name: str) -> str:
+    asset_svg = asset_icon_svg(name)
+    if asset_svg:
+        return asset_svg
     icons = {
         "target": '<path d="M12 3a9 9 0 1 0 9 9h-3a6 6 0 1 1-6-6V3Z"/><path d="M12 8a4 4 0 1 0 4 4h-3a1 1 0 1 1-1-1V8Z"/><path d="M13 3h8v3h-5v5h-3V3Z"/>',
         "check": '<path d="M20 6 9 17l-5-5"/><path d="M21 12a9 9 0 1 1-5.3-8.2"/>',
@@ -1633,6 +1666,8 @@ def render_html(data: dict, analysis_path: Path, outdir: Path) -> str:
     }}
     .title-icon svg {{ width: 14px; height: 14px; }}
     .badge svg {{ width: 20px; height: 20px; }}
+    .icon-shell svg [fill]:not([fill="none"]) {{ fill: #fff; }}
+    .icon-shell svg [stroke] {{ stroke: #fff; }}
     .focus-item.good .icon-shell {{ background: #24d86c; }}
     .focus-item.warn .icon-shell {{ background: #ffad22; }}
     .focus-item.info .icon-shell {{ background: #168cff; }}
@@ -2089,6 +2124,12 @@ def render_html(data: dict, analysis_path: Path, outdir: Path) -> str:
       color: #fff;
     }}
     .icon-shell svg path, .icon-shell svg circle, .icon-shell svg line, .icon-shell svg polyline, .icon-shell svg polygon {{
+      stroke: #fff;
+    }}
+    .icon-shell svg [fill]:not([fill="none"]) {{
+      fill: #fff;
+    }}
+    .icon-shell svg [stroke] {{
       stroke: #fff;
     }}
     .radar text {{
