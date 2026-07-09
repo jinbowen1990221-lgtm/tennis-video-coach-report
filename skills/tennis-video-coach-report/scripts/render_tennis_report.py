@@ -1756,11 +1756,14 @@ def render_html(data: dict, analysis_path: Path, outdir: Path) -> str:
       display: grid;
       grid-template-columns: auto 1fr;
       gap: 16px;
+      align-items: center;
+      justify-items: center;
       padding: 18px;
       border-radius: 16px;
       background: rgba(20, 25, 39, .72);
       box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
       margin-bottom: 14px;
+      text-align: center;
     }}
     .speed-score {{
       width: 94px;
@@ -1789,12 +1792,14 @@ def render_html(data: dict, analysis_path: Path, outdir: Path) -> str:
       margin: 2px 0 7px;
       color: #fff;
       font-size: 20px;
+      text-align: center;
     }}
     .speed-hero p {{
       margin: 0;
       color: #c9d1e1;
       font-size: 15px;
       line-height: 1.58;
+      text-align: center;
     }}
     .speed-list {{
       display: grid;
@@ -1917,23 +1922,32 @@ def render_html(data: dict, analysis_path: Path, outdir: Path) -> str:
       color: #324068;
     }}
     .section-body, .analysis-card {{
-      padding: 24px 28px 26px;
+      padding: 0 28px 26px;
     }}
-    .section-title {{
+    .section-title,
+    .analysis-card .eyebrow,
+    .replay::before {{
+      display: flex;
+      align-items: center;
       justify-content: center;
-      width: max-content;
-      min-width: 180px;
-      max-width: 88%;
-      margin: -26px auto 18px;
-      padding: 9px 30px 8px;
+      width: 230px;
+      max-width: calc(100% - 56px);
+      min-height: 48px;
+      margin: 0 auto 20px;
+      padding: 9px 18px 8px;
       border-radius: 0 0 18px 18px;
       background: linear-gradient(180deg, #eefaff, #d9f3ff);
       color: #496cae;
       font-size: 20px;
       font-weight: 950;
       box-shadow: 0 5px 10px rgba(75, 125, 215, .08);
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      gap: 0;
     }}
     .title-icon {{
+      display: none;
       width: 0;
       height: 0;
       overflow: hidden;
@@ -1950,15 +1964,8 @@ def render_html(data: dict, analysis_path: Path, outdir: Path) -> str:
     .analysis-card .eyebrow {{
       grid-column: 1 / -1;
       justify-self: center;
-      width: max-content;
-      min-width: 180px;
-      margin: -24px auto 0;
-      padding: 9px 30px 8px;
-      border-radius: 0 0 18px 18px;
-      background: linear-gradient(180deg, #eefaff, #d9f3ff);
-      color: #496cae;
       font-size: 19px;
-      font-weight: 950;
+      margin-bottom: 0;
     }}
     .score-line {{
       grid-row: 2 / span 4;
@@ -2038,21 +2045,11 @@ def render_html(data: dict, analysis_path: Path, outdir: Path) -> str:
       text-align: center;
     }}
     .replay {{
-      padding: 24px 28px 26px;
+      padding: 0 28px 26px;
     }}
     .replay::before {{
       content: "动作片段回放";
-      display: block;
-      width: max-content;
-      min-width: 180px;
-      margin: -24px auto 18px;
-      padding: 9px 30px 8px;
-      border-radius: 0 0 18px 18px;
-      background: linear-gradient(180deg, #eefaff, #d9f3ff);
-      color: #496cae;
       font-size: 19px;
-      font-weight: 950;
-      text-align: center;
     }}
     .replay-bg {{
       display: none;
@@ -2172,14 +2169,14 @@ def render_html(data: dict, analysis_path: Path, outdir: Path) -> str:
     }}
     @media (max-width: 620px) {{
       .page {{ padding: 34px 13px 28px; }}
-      .analysis-card {{ padding: 24px 18px 24px; }}
+      .analysis-card {{ padding: 0 18px 24px; }}
       .score-line strong {{ font-size: 58px; }}
       .score-line span {{ font-size: 20px; }}
       .stage {{ font-size: 17px; }}
       .badge {{ font-size: 15px; padding: 9px 18px; }}
       .analysis-card h1 {{ font-size: 21px; }}
       .analysis-card p {{ font-size: 15px; line-height: 1.55; }}
-      .replay {{ padding: 12px; }}
+      .replay {{ padding: 0 12px 18px; }}
       .review-shell, .review-note, .chain-overlay {{ width: 84%; }}
       .review-shell img, .review-shell video {{ border-radius: 10px; }}
       .replay-label {{ left: 58px; top: 20px; font-size: 11px; }}
@@ -2188,19 +2185,26 @@ def render_html(data: dict, analysis_path: Path, outdir: Path) -> str:
       .chain-step {{ min-height: 70px; padding: 9px; }}
       .chain-step span {{ font-size: 12px; }}
       .chain-step small {{ font-size: 10px; }}
-      .section-body {{ padding: 18px 14px; }}
-      .section-title {{ font-size: 18px; }}
+      .section-body {{ padding: 0 14px 18px; }}
+      .section-title, .analysis-card .eyebrow, .replay::before {{
+        width: 206px;
+        max-width: calc(100% - 44px);
+        min-height: 44px;
+        margin: 0 auto 18px;
+        padding: 8px 14px 7px;
+        font-size: 18px;
+      }}
       .focus-item, .moment-dark, .insight-card {{ padding: 14px; gap: 11px; }}
       .focus-item p, .moment-dark p, .insight-card p {{ font-size: 13px; }}
       .focus-item h3, .insight-card h3, .moment-dark h3 {{ font-size: 16px; }}
       .focus-item h4, .moment-dark h4 {{ font-size: 14px; }}
       .metric-row {{ grid-template-columns: 72px 1fr 28px; font-size: 12px; }}
       .time-badge {{ width: 49px; font-size: 11px; }}
-      .speed-hero {{ grid-template-columns: 1fr; gap: 12px; padding: 14px; }}
-      .speed-score {{ width: 76px; height: 76px; }}
+      .speed-hero {{ grid-template-columns: 1fr; gap: 12px; padding: 14px; text-align: center; justify-items: center; }}
+      .speed-score {{ width: 76px; height: 76px; justify-self: center; }}
       .speed-score strong {{ font-size: 23px; }}
-      .speed-hero h3 {{ font-size: 16px; }}
-      .speed-hero p {{ font-size: 13px; }}
+      .speed-hero h3 {{ font-size: 16px; text-align: center; }}
+      .speed-hero p {{ font-size: 13px; text-align: center; }}
       .speed-row {{ grid-template-columns: 1fr; gap: 8px; padding: 12px; }}
       .speed-row b {{ text-align: left; }}
       .report-header {{ min-height: 96px; padding: 8px 4px 16px; }}
@@ -2208,7 +2212,7 @@ def render_html(data: dict, analysis_path: Path, outdir: Path) -> str:
       .report-subtitle {{ font-size: 17px; }}
       .analysis-card {{ grid-template-columns: 1fr; text-align: center; gap: 14px; }}
       .analysis-card .main-summary {{ grid-column: auto; width: 100%; }}
-      .analysis-card .eyebrow {{ margin-top: -24px; font-size: 17px; }}
+      .analysis-card .eyebrow {{ font-size: 17px; margin-bottom: 0; }}
       .score-line {{ grid-row: auto; width: 156px; height: 156px; justify-self: center; }}
       .score-line strong {{ font-size: 40px; }}
       .score-line span {{ font-size: 13px; }}
