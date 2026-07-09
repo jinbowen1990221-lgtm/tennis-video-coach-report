@@ -212,6 +212,15 @@ Deliver these files when feasible:
 - `report/tennis-report-mobile.png`
 - `report/tennis-report.pdf`
 
+The default report visual style should be a dark mobile-first comprehensive analysis card layout:
+
+- top score card with `score`, stage label, chips, headline, and coach summary
+- replay image card with a blurred video-frame background
+- diagnosis focus cards for highlight, improvement, and next step
+- ability radar and metric bars
+- key moment cards tied to timestamps
+- advanced insight cards for playing style, rally organization, and load/risk notes
+
 In the final response, link the HTML report, PNG, PDF, and 2-4 representative visual assets using absolute paths.
 
 ## Boundaries

@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import html
 import json
+import math
 import shutil
 import sys
 from datetime import date
@@ -935,6 +936,604 @@ def render_html(data: dict, analysis_path: Path, outdir: Path) -> str:
       <div class="practice"><ol>{practice_html}</ol></div>
       <p class="caption">{esc(data.get("social_caption", ""))}</p>
     </section>
+  </main>
+</body>
+</html>"""
+
+
+def first_text(values: list[object], fallback: str = "") -> str:
+    for value in values:
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return fallback
+
+
+def report_score(data: dict) -> int:
+    if isinstance(data.get("score"), (int, float)):
+        return max(0, min(100, int(round(float(data["score"])))))
+    chain = data.get("kinetic_chain") or {}
+    level = str(chain.get("overall_level") or "").lower()
+    if level == "good":
+        return 88
+    if level == "fix":
+        return 76
+    if level == "unknown":
+        return 72
+    confidence = str(data.get("confidence") or "").lower()
+    if confidence == "high":
+        return 86
+    if confidence == "low":
+        return 74
+    return 80
+
+
+def stage_label(score: int) -> str:
+    if score >= 90:
+        return "高阶稳定阶段（Advanced+）"
+    if score >= 80:
+        return "高级进阶阶段（Advanced）"
+    if score >= 70:
+        return "进阶建立阶段（Intermediate）"
+    return "基础修正阶段（Foundation）"
+
+
+def report_metrics(data: dict) -> list[tuple[str, int]]:
+    explicit = data.get("ability_radar")
+    if isinstance(explicit, list) and explicit:
+        rows = []
+        for row in explicit:
+            if isinstance(row, dict):
+                label = str(row.get("label") or row.get("name") or "")
+                value = row.get("value", 0)
+                if label:
+                    rows.append((label, max(0, min(100, int(float(value))))))
+        if rows:
+            return rows[:6]
+
+    base = {
+        "准备启动": 80,
+        "动力链": 78,
+        "击球时机": 79,
+        "随挥收拍": 82,
+        "拍面控制": 80,
+        "身体稳定": 79,
+    }
+    chain = data.get("kinetic_chain") or {}
+    for segment in chain.get("segments", []):
+        label = str(segment.get("label") or "")
+        level = str(segment.get("level") or "").lower()
+        value = {"good": 86, "watch": 80, "fix": 72, "unknown": 66}.get(level)
+        if value is None:
+            continue
+        if "脚" in label or "距离" in label:
+            base["准备启动"] = value
+        elif "腿" in label or "髋" in label:
+            base["动力链"] = value
+        elif "肩" in label or "躯干" in label:
+            base["身体稳定"] = value
+        elif "拍" in label or "触球" in label:
+            base["击球时机"] = value
+    return list(base.items())
+
+
+def radar_svg(metrics: list[tuple[str, int]]) -> str:
+    size = 280
+    cx = cy = size / 2
+    radius = 92
+    count = len(metrics)
+    if count < 3:
+        return ""
+
+    def point(index: int, value: float) -> tuple[float, float]:
+        angle = -math.pi / 2 + index * (2 * math.pi / count)
+        r = radius * value
+        return cx + math.cos(angle) * r, cy + math.sin(angle) * r
+
+    rings = []
+    for scale in (0.2, 0.4, 0.6, 0.8, 1.0):
+        pts = " ".join(f"{x:.1f},{y:.1f}" for x, y in (point(i, scale) for i in range(count)))
+        rings.append(f'<polygon points="{pts}" fill="none" stroke="rgba(45,151,255,.22)" stroke-width="2"/>')
+    axes = []
+    labels = []
+    for i, (label, _) in enumerate(metrics):
+        x, y = point(i, 1.0)
+        axes.append(f'<line x1="{cx:.1f}" y1="{cy:.1f}" x2="{x:.1f}" y2="{y:.1f}" stroke="rgba(45,151,255,.18)" stroke-width="2"/>')
+        lx, ly = point(i, 1.24)
+        labels.append(f'<text x="{lx:.1f}" y="{ly:.1f}" text-anchor="middle" dominant-baseline="middle">{esc(label)}</text>')
+    data_pts = " ".join(f"{x:.1f},{y:.1f}" for x, y in (point(i, value / 100) for i, (_, value) in enumerate(metrics)))
+    return f"""
+      <svg class="radar" viewBox="0 0 {size} {size}" role="img" aria-label="能力雷达">
+        {''.join(rings)}
+        {''.join(axes)}
+        <polygon points="{data_pts}" fill="rgba(20,145,255,.62)" stroke="#1da1ff" stroke-width="4"/>
+        <circle cx="{cx:.1f}" cy="{cy:.1f}" r="4" fill="#35aaff"/>
+        {''.join(labels)}
+      </svg>
+    """
+
+
+def render_metric_bars(metrics: list[tuple[str, int]]) -> str:
+    rows = []
+    for label, value in metrics:
+        rows.append(f"""
+          <div class="metric-row">
+            <span>{esc(label)}</span>
+            <div class="metric-track"><i style="width:{value}%"></i></div>
+            <b>{value}</b>
+          </div>
+        """)
+    return "".join(rows)
+
+
+def focus_blocks(data: dict) -> list[tuple[str, str, str, str]]:
+    highlights = data.get("highlights") or []
+    issues = data.get("issues") or []
+    next_practice = data.get("next_practice") or []
+    good = first_text([highlights[0].get("note") if highlights else ""], "准备与启动机制积极，能在来球后保持主动调整。")
+    issue = first_text([issues[0].get("impact") if issues else "", issues[0].get("evidence") if issues else ""], "动力链底端的稳定支撑还不足，面对更快来球时容易让击球点不稳定。")
+    next_step = first_text(next_practice, "下一次训练先抓准备启动和击球后回位，再逐步提高来球强度。")
+    return [
+        ("亮点", "good", "准备与启动机制积极", good),
+        ("待改进", "warn", "动力链底端支撑仍不足", issue),
+        ("下一步", "info", "下肢爆发与安全制动", next_step),
+    ]
+
+
+def render_focus_blocks(data: dict) -> str:
+    cards = []
+    for label, kind, title, body in focus_blocks(data):
+        cards.append(f"""
+          <article class="focus-item {kind}">
+            <div class="focus-icon"></div>
+            <div>
+              <h3>{esc(label)}</h3>
+              <h4>{esc(title)}</h4>
+              <p>{esc(body)}</p>
+            </div>
+          </article>
+        """)
+    return "".join(cards)
+
+
+def render_key_moments_dark(data: dict) -> str:
+    rows = []
+    phases = data.get("phase_review") or data.get("phase_reviews") or []
+    evidence = data.get("evidence_frames") or []
+    source = phases[:2] if phases else evidence[:2]
+    for item in source:
+        timestamp = str(item.get("timestamp") or "")
+        title = str(item.get("label") or item.get("title") or item.get("phase") or "关键片段")
+        headline = str(item.get("change") or item.get("claim") or item.get("issue") or item.get("note") or "")
+        detail = str(item.get("issue") or item.get("cue") or item.get("confidence") or "")
+        rows.append(f"""
+          <article class="moment-dark">
+            <div class="time-badge"><b>{esc(timestamp)}</b><span>{esc(item.get("clip_end", ""))}</span></div>
+            <div>
+              <h3>{esc(title)}</h3>
+              <h4>{esc(headline)}</h4>
+              <p>{esc(detail)}</p>
+            </div>
+          </article>
+        """)
+    if not rows:
+        rows.append("""
+          <article class="moment-dark">
+            <div class="time-badge"><b>--</b><span></span></div>
+            <div><h3>关键片段</h3><h4>请在分析中补充具体时间点</h4><p>报告会把每个判断绑定到证据画面。</p></div>
+          </article>
+        """)
+    return "".join(rows)
+
+
+def render_insights_dark(data: dict) -> str:
+    chain = data.get("kinetic_chain") or {}
+    issues = data.get("issues") or []
+    stroke = data.get("stroke_analysis") or []
+    items = [
+        ("打球风格", first_text([data.get("main_focus"), data.get("one_liner")], "节奏型、稳定型打法")),
+        ("球路组织", first_text([stroke[0].get("summary") if stroke else "", chain.get("summary")], "依赖连续调整寻找对抗机会。")),
+        ("负荷风险", first_text([issues[0].get("impact") if issues else ""], "强度上升时，如果准备和制动不足，容易让手臂承担过多补救压力。")),
+    ]
+    return "".join(f"""
+      <article class="insight-card">
+        <div class="insight-icon"></div>
+        <div>
+          <h3>{esc(title)}</h3>
+          <p>{esc(body)}</p>
+        </div>
+      </article>
+    """ for title, body in items)
+
+
+def render_html(data: dict, analysis_path: Path, outdir: Path) -> str:
+    analysis_dir = analysis_path.parent
+    asset_dir = outdir / "assets"
+    cover = rel_asset(data.get("cover_frame"), analysis_dir, asset_dir)
+    if not cover:
+        highlights = data.get("highlights") or []
+        cover = rel_asset(highlights[0].get("frame") if highlights else None, analysis_dir, asset_dir)
+    video = data.get("video") or {}
+    today = data.get("date") or date.today().isoformat()
+    score = report_score(data)
+    metrics = report_metrics(data)
+    summaries = data.get("coach_summary") or []
+    summary = first_text(summaries, data.get("one_liner", "动作节奏和动力链报告已生成。"))
+    headline = first_text([data.get("headline"), data.get("main_focus")], "动作节奏清晰，具备继续提升的基础")
+    ntrp = data.get("ntrp") or "约 NTRP 3.2"
+    confidence = data.get("analysis_confidence") or f"分析置信度 {confidence_label(data.get('confidence', 'medium'))}"
+    stage = stage_label(score)
+    main_body = " ".join(str(s) for s in summaries[1:3]) or str(data.get("one_liner") or "")
+    if not main_body:
+        main_body = "本报告会把关键判断绑定到具体时间点、画面和慢动作片段，优先指出最值得修正的一处动作链断点。"
+
+    return f"""<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{esc(data.get("title", "AI 综合分析报告"))}</title>
+  <style>
+    * {{ box-sizing: border-box; }}
+    body {{
+      margin: 0;
+      min-height: 100vh;
+      background: #0c101c;
+      color: #eef3ff;
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", Arial, sans-serif;
+    }}
+    .page {{
+      width: min(100%, 900px);
+      margin: 0 auto;
+      padding: 64px 26px 44px;
+      background:
+        radial-gradient(circle at 50% 0%, rgba(46, 82, 150, .18), transparent 34%),
+        linear-gradient(180deg, #0b0f1b 0%, #151929 52%, #0d1220 100%);
+    }}
+    .panel {{
+      position: relative;
+      overflow: hidden;
+      border-radius: 20px;
+      background: linear-gradient(180deg, rgba(39,44,61,.96), rgba(32,37,54,.96));
+      border: 1px solid rgba(255,255,255,.08);
+      box-shadow: 0 18px 40px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.05);
+      margin-bottom: 24px;
+    }}
+    .analysis-card {{
+      padding: 28px 28px 30px;
+      text-align: center;
+    }}
+    .eyebrow {{
+      margin: 0 0 18px;
+      color: #aeb7c9;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0;
+    }}
+    .score-line {{
+      display: inline-flex;
+      align-items: baseline;
+      gap: 8px;
+      margin-bottom: 12px;
+    }}
+    .score-line strong {{
+      font-size: 78px;
+      line-height: .86;
+      font-weight: 900;
+      letter-spacing: 0;
+      color: #ffffff;
+    }}
+    .score-line span {{
+      font-size: 26px;
+      color: #d7ddea;
+      font-weight: 800;
+    }}
+    .stage {{
+      margin: 0 auto 18px;
+      max-width: 690px;
+      color: #4ee074;
+      font-size: 21px;
+      line-height: 1.45;
+      font-weight: 800;
+    }}
+    .badge {{
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 24px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #ff9c22, #ff6f23);
+      color: white;
+      font-weight: 900;
+      font-size: 18px;
+      margin: 0 0 20px;
+      box-shadow: 0 12px 24px rgba(255, 117, 30, .28);
+    }}
+    .chips {{
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 20px;
+    }}
+    .chip {{
+      padding: 8px 15px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.1);
+      color: #e6ecf8;
+      font-size: 15px;
+      font-weight: 800;
+    }}
+    .chip.primary {{
+      background: rgba(0,145,255,.18);
+      color: #2da4ff;
+    }}
+    h1, h2, h3, h4, p {{ letter-spacing: 0; }}
+    .analysis-card h1 {{
+      margin: 0 0 14px;
+      font-size: 27px;
+      line-height: 1.22;
+      color: #fff;
+    }}
+    .analysis-card p {{
+      margin: 0;
+      color: #d3d9e8;
+      font-size: 19px;
+      line-height: 1.62;
+    }}
+    .replay {{
+      height: 360px;
+      padding: 18px;
+    }}
+    .replay-bg {{
+      position: absolute;
+      inset: 0;
+      background-image: url("{esc(cover)}");
+      background-size: cover;
+      background-position: center;
+      filter: blur(18px) brightness(.7);
+      transform: scale(1.08);
+      opacity: .75;
+    }}
+    .replay img {{
+      position: relative;
+      z-index: 2;
+      width: 78%;
+      height: 100%;
+      margin: 0 auto;
+      display: block;
+      object-fit: cover;
+      border-radius: 14px;
+      box-shadow: 0 14px 38px rgba(0,0,0,.32);
+    }}
+    .replay-label {{
+      position: absolute;
+      z-index: 3;
+      top: 28px;
+      left: 110px;
+      padding: 8px 13px;
+      border-radius: 999px;
+      background: rgba(22, 27, 41, .74);
+      color: white;
+      font-size: 13px;
+      font-weight: 900;
+    }}
+    .section-title {{
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 0 0 18px;
+      color: #f3f6ff;
+      font-size: 23px;
+      line-height: 1.2;
+    }}
+    .section-title i {{
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #168cff;
+      box-shadow: 0 0 16px rgba(22,140,255,.8);
+    }}
+    .section-body {{ padding: 24px; }}
+    .focus-list, .moment-list, .insight-list {{
+      display: grid;
+      gap: 14px;
+    }}
+    .focus-item, .moment-dark, .insight-card {{
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 15px;
+      padding: 18px;
+      border-radius: 16px;
+      background: rgba(20, 25, 39, .72);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+    }}
+    .focus-icon, .insight-icon {{
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      margin-top: 2px;
+      background: #168cff;
+      box-shadow: 0 0 18px rgba(22,140,255,.45);
+    }}
+    .focus-item.good .focus-icon {{ background: #24d86c; }}
+    .focus-item.warn .focus-icon {{ background: #ffad22; }}
+    .focus-item.info .focus-icon {{ background: #168cff; }}
+    .insight-card:nth-child(1) .insight-icon {{ background: #9b4dff; }}
+    .insight-card:nth-child(2) .insight-icon {{ background: #18a8c9; }}
+    .insight-card:nth-child(3) .insight-icon {{ background: #ff3f4f; }}
+    .focus-item h3, .focus-item h4, .insight-card h3, .moment-dark h3, .moment-dark h4 {{
+      margin: 0;
+    }}
+    .focus-item h3 {{
+      color: #fff;
+      font-size: 20px;
+      margin-bottom: 5px;
+    }}
+    .focus-item h4, .moment-dark h4 {{
+      color: #eef3ff;
+      font-size: 17px;
+      line-height: 1.35;
+      margin-bottom: 7px;
+    }}
+    .focus-item p, .moment-dark p, .insight-card p {{
+      margin: 0;
+      color: #c9d1e1;
+      font-size: 16px;
+      line-height: 1.58;
+    }}
+    .radar-wrap {{
+      display: grid;
+      justify-items: center;
+      gap: 10px;
+    }}
+    .radar {{
+      width: min(100%, 430px);
+      height: auto;
+      margin: 0 auto 6px;
+    }}
+    .radar text {{
+      fill: #dce6f8;
+      font-size: 14px;
+      font-weight: 800;
+    }}
+    .metric-list {{
+      width: 100%;
+      display: grid;
+      gap: 10px;
+      margin-top: 6px;
+    }}
+    .metric-row {{
+      display: grid;
+      grid-template-columns: 96px 1fr 38px;
+      gap: 10px;
+      align-items: center;
+      color: #dce4f3;
+      font-size: 15px;
+      font-weight: 800;
+    }}
+    .metric-track {{
+      height: 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.12);
+      overflow: hidden;
+    }}
+    .metric-track i {{
+      display: block;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #147cff, #20a8ff);
+    }}
+    .metric-row b {{
+      color: #1da1ff;
+      font-size: 14px;
+      text-align: right;
+    }}
+    .time-badge {{
+      width: 58px;
+      min-height: 48px;
+      border-radius: 14px;
+      background: rgba(12, 74, 116, .62);
+      color: #ccefff;
+      display: grid;
+      place-items: center;
+      align-content: center;
+      font-size: 13px;
+      font-weight: 900;
+    }}
+    .time-badge span {{
+      display: block;
+      color: #91b7d6;
+      font-weight: 800;
+      margin-top: 2px;
+    }}
+    .insight-card h3, .moment-dark h3 {{
+      color: #ffffff;
+      font-size: 20px;
+      margin-bottom: 7px;
+    }}
+    .footer {{
+      color: #7f8ca5;
+      text-align: center;
+      font-size: 16px;
+      padding: 8px 0 0;
+    }}
+    @media (max-width: 620px) {{
+      .page {{ padding: 34px 13px 28px; }}
+      .analysis-card {{ padding: 24px 18px 24px; }}
+      .score-line strong {{ font-size: 58px; }}
+      .score-line span {{ font-size: 20px; }}
+      .stage {{ font-size: 17px; }}
+      .badge {{ font-size: 15px; padding: 9px 18px; }}
+      .analysis-card h1 {{ font-size: 21px; }}
+      .analysis-card p {{ font-size: 15px; line-height: 1.55; }}
+      .replay {{ height: 180px; padding: 12px; }}
+      .replay img {{ width: 76%; border-radius: 10px; }}
+      .replay-label {{ left: 58px; top: 20px; font-size: 11px; }}
+      .section-body {{ padding: 18px 14px; }}
+      .section-title {{ font-size: 18px; }}
+      .focus-item, .moment-dark, .insight-card {{ padding: 14px; gap: 11px; }}
+      .focus-item p, .moment-dark p, .insight-card p {{ font-size: 13px; }}
+      .focus-item h3, .insight-card h3, .moment-dark h3 {{ font-size: 16px; }}
+      .focus-item h4, .moment-dark h4 {{ font-size: 14px; }}
+      .metric-row {{ grid-template-columns: 72px 1fr 28px; font-size: 12px; }}
+      .time-badge {{ width: 49px; font-size: 11px; }}
+    }}
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="panel analysis-card">
+      <p class="eyebrow">AI 综合分析报告</p>
+      <div class="score-line"><strong>{score}</strong><span>/100</span></div>
+      <p class="stage">已进入{esc(stage)}，{esc(summary)}</p>
+      <div class="badge">掌控全场的节奏舞者</div>
+      <div class="chips">
+        <span class="chip primary">进阶</span>
+        <span class="chip">{esc(ntrp)}</span>
+        <span class="chip">{esc(confidence)}</span>
+      </div>
+      <h1>{esc(headline)}</h1>
+      <p>{esc(main_body)}</p>
+    </section>
+
+    <section class="panel replay">
+      <div class="replay-bg"></div>
+      <div class="replay-label">本场回顾</div>
+      {image_tag(cover, "本场回顾")}
+    </section>
+
+    <section class="panel">
+      <div class="section-body">
+        <h2 class="section-title"><i></i>本次诊断重点</h2>
+        <div class="focus-list">{render_focus_blocks(data)}</div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="section-body">
+        <h2 class="section-title"><i></i>能力雷达</h2>
+        <div class="radar-wrap">
+          {radar_svg(metrics)}
+          <div class="metric-list">{render_metric_bars(metrics)}</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="section-body">
+        <h2 class="section-title"><i></i>关键时刻</h2>
+        <div class="moment-list">{render_key_moments_dark(data)}</div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="section-body">
+        <h2 class="section-title"><i></i>进阶洞察</h2>
+        <div class="insight-list">{render_insights_dark(data)}</div>
+      </div>
+    </section>
+
+    <footer class="footer">小球圈 · AI 综合分析</footer>
   </main>
 </body>
 </html>"""

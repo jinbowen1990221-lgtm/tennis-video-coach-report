@@ -16,6 +16,10 @@ Create `analysis.json` in the run folder, then render it with `scripts/render_te
   },
   "one_liner": "问题不在不会发力，而是准备动作晚了半拍。",
   "main_focus": "提前转肩",
+  "headline": "动作柔顺舒展，兼具较好的节奏韵律与回球控制力。",
+  "score": 80,
+  "ntrp": "约 NTRP 3.2",
+  "analysis_confidence": "分析置信度 82%",
   "confidence": "medium",
   "cover_frame": "candidate_frames/candidate_03_t038.50.jpg",
   "coach_summary": [
@@ -104,6 +108,14 @@ Create `analysis.json` in the run folder, then render it with `scripts/render_te
       }
     ]
   },
+  "ability_radar": [
+    {"label": "准备启动", "value": 82},
+    {"label": "动力链", "value": 76},
+    {"label": "击球时机", "value": 81},
+    {"label": "随挥收拍", "value": 84},
+    {"label": "拍面控制", "value": 80},
+    {"label": "身体稳定", "value": 79}
+  ],
   "evidence_frames": [
     {
       "timestamp": "112.75s",
@@ -232,6 +244,10 @@ Create `analysis.json` in the run folder, then render it with `scripts/render_te
 ## Field Notes
 
 - `confidence`: use `high`, `medium`, or `low`.
+- `score`: optional 0-100 top-line report score. If omitted, the renderer derives a conservative score from confidence and kinetic-chain level.
+- `headline`: optional short top-card conclusion. If omitted, the renderer uses `main_focus`.
+- `ntrp`: optional display chip such as `约 NTRP 3.2`.
+- `analysis_confidence`: optional display chip such as `分析置信度 82%`.
 - `cover_frame`: choose a good-looking frame, not necessarily the problem frame.
 - `highlights`: 1-3 items.
 - `issues`: 1-3 items, but prefer one main issue for beginners.
@@ -251,6 +267,7 @@ Create `analysis.json` in the run folder, then render it with `scripts/render_te
 - `stroke_analysis[].phases[].assessment`: use `good`, `watch`, `fix`, or `unknown`.
 - `kinetic_chain`: optional body-segment analysis. Use this when there is enough video to reason about feet-to-racket sequence.
 - `kinetic_chain.overall_level` and `kinetic_chain.segments[].level`: use `good`, `watch`, `fix`, or `unknown`.
+- `ability_radar`: optional 3-6 item metric list for the dark mobile report radar. Each item uses `label` and numeric `value` from 0-100. If omitted, the renderer derives values from `kinetic_chain`.
 - `evidence_frames`: optional claim-to-frame map. Include at least 2-4 items for mechanics-heavy reports.
 - `confidence_notes`: optional report-level uncertainty bullets. Use this to explain camera limits without weakening evidence-backed claims.
 - `pose_analysis`: optional pose/skeleton review. Use this when key frames have real pose-estimation overlays.
