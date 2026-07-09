@@ -25,7 +25,7 @@ Create `analysis.json` in the run folder, then render it with `scripts/render_te
   "cover_frame": "candidate_frames/candidate_03_t038.50.jpg",
   "top_review_title": "动力链断点片段",
   "top_review_note": "这一小段最能看出脚步到位、转肩和拍头释放之间的时间差。",
-  "top_review_clip": "swing_clips/middle-中段/swing_slow_annotated.mp4",
+  "top_review_clip": "swing_clips/middle-中段/swing_normal.mp4",
   "top_review_poster": "swing_clips/middle-中段/freeze_annotated.jpg",
   "scoring": {
     "method": "video_evidence_weighted_movement_score",
@@ -319,7 +319,7 @@ Create `analysis.json` in the run folder, then render it with `scripts/render_te
 - `ntrp`: optional display chip such as `约 NTRP 3.2`.
 - `analysis_confidence`: optional display chip such as `分析置信度 82%`.
 - `cover_frame`: choose a good-looking frame, not necessarily the problem frame.
-- `top_review_clip`: optional short video for the top review card. Prefer the most representative problem segment, ideally a slow-motion or annotated clip.
+- `top_review_clip`: optional short video for the top review card. Prefer a clean clip without burned-in explanatory text; put coaching text in `top_review_note` or the phase `issue/change` copy below the video.
 - `top_review_poster`: optional frame shown behind/inside the top review video card.
 - `top_review_title`: optional label for the top review card, such as `动力链断点片段`.
 - `top_review_note`: optional one-sentence explanation of what to watch in the top clip.

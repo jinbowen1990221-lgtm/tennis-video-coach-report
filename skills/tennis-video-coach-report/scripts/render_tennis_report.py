@@ -1252,17 +1252,19 @@ def top_review_media(data: dict, analysis_dir: Path, asset_dir: Path) -> tuple[s
     phase = selected_issue_phase(data)
     video = rel_media(
         data.get("top_review_clip")
-        or phase.get("annotated_slow_clip")
         or phase.get("normal_clip")
+        or phase.get("clean_clip")
+        or phase.get("raw_clip")
+        or phase.get("annotated_slow_clip")
         or phase.get("clip"),
         analysis_dir,
         asset_dir,
     )
     poster = rel_asset(
         data.get("top_review_poster")
-        or phase.get("freeze_frame")
         or phase.get("frame")
-        or data.get("cover_frame"),
+        or data.get("cover_frame")
+        or phase.get("freeze_frame"),
         analysis_dir,
         asset_dir,
     )
@@ -1994,6 +1996,12 @@ def render_html(data: dict, analysis_path: Path, outdir: Path) -> str:
       font-size: 14px;
       line-height: 1.7;
     }}
+    .analysis-card .main-summary {{
+      grid-column: 1 / -1;
+      width: min(100%, 560px);
+      margin: 4px auto 0;
+      text-align: center;
+    }}
     .replay {{
       padding: 24px 28px 26px;
     }}
@@ -2077,7 +2085,11 @@ def render_html(data: dict, analysis_path: Path, outdir: Path) -> str:
       box-shadow: none;
     }}
     .icon-shell svg {{
-      stroke: #5575ef;
+      stroke: #fff;
+      color: #fff;
+    }}
+    .icon-shell svg path, .icon-shell svg circle, .icon-shell svg line, .icon-shell svg polyline, .icon-shell svg polygon {{
+      stroke: #fff;
     }}
     .radar text {{
       fill: #435179;
@@ -2154,6 +2166,7 @@ def render_html(data: dict, analysis_path: Path, outdir: Path) -> str:
       .report-title {{ font-size: 28px; }}
       .report-subtitle {{ font-size: 17px; }}
       .analysis-card {{ grid-template-columns: 1fr; text-align: center; gap: 14px; }}
+      .analysis-card .main-summary {{ grid-column: auto; width: 100%; }}
       .analysis-card .eyebrow {{ margin-top: -24px; font-size: 17px; }}
       .score-line {{ grid-row: auto; width: 156px; height: 156px; justify-self: center; }}
       .score-line strong {{ font-size: 40px; }}
@@ -2186,7 +2199,7 @@ def render_html(data: dict, analysis_path: Path, outdir: Path) -> str:
         <span class="chip">{esc(confidence)}</span>
       </div>
       <h1>{esc(headline)}</h1>
-      <p>{esc(main_body)}</p>
+      <p class="main-summary">{esc(main_body)}</p>
     </section>
 
     <section class="panel">
