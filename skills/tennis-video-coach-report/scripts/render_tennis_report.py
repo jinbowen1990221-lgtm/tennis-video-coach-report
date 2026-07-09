@@ -951,6 +951,9 @@ def first_text(values: list[object], fallback: str = "") -> str:
 def report_score(data: dict) -> int:
     if isinstance(data.get("score"), (int, float)):
         return max(0, min(100, int(round(float(data["score"])))))
+    action = data.get("action_score") or data.get("movement_score")
+    if isinstance(action, (int, float)):
+        return max(0, min(100, int(round(float(action)))))
     chain = data.get("kinetic_chain") or {}
     level = str(chain.get("overall_level") or "").lower()
     if level == "good":
@@ -969,12 +972,12 @@ def report_score(data: dict) -> int:
 
 def stage_label(score: int) -> str:
     if score >= 90:
-        return "高阶稳定阶段（Advanced+）"
+        return "动作链高效阶段（Advanced+）"
     if score >= 80:
-        return "高级进阶阶段（Advanced）"
+        return "动力链进阶阶段（Advanced）"
     if score >= 70:
-        return "进阶建立阶段（Intermediate）"
-    return "基础修正阶段（Foundation）"
+        return "动作连接建立阶段（Intermediate）"
+    return "基础动作重建阶段（Foundation）"
 
 
 def report_metrics(data: dict) -> list[tuple[str, int]]:
@@ -994,8 +997,8 @@ def report_metrics(data: dict) -> list[tuple[str, int]]:
         "准备启动": 80,
         "动力链": 78,
         "击球时机": 79,
+        "挥速释放": 77,
         "随挥收拍": 82,
-        "拍面控制": 80,
         "身体稳定": 79,
     }
     chain = data.get("kinetic_chain") or {}
@@ -1013,7 +1016,30 @@ def report_metrics(data: dict) -> list[tuple[str, int]]:
             base["身体稳定"] = value
         elif "拍" in label or "触球" in label:
             base["击球时机"] = value
+    speed = data.get("swing_speed") or {}
+    if isinstance(speed, dict):
+        value = speed.get("score") or speed.get("release_score")
+        if isinstance(value, (int, float)):
+            base["挥速释放"] = max(0, min(100, int(float(value))))
     return list(base.items())
+
+
+def icon_svg(name: str) -> str:
+    icons = {
+        "target": '<path d="M12 3a9 9 0 1 0 9 9h-3a6 6 0 1 1-6-6V3Z"/><path d="M12 8a4 4 0 1 0 4 4h-3a1 1 0 1 1-1-1V8Z"/><path d="M13 3h8v3h-5v5h-3V3Z"/>',
+        "check": '<path d="M20 6 9 17l-5-5"/><path d="M21 12a9 9 0 1 1-5.3-8.2"/>',
+        "warn": '<path d="m12 3 10 18H2L12 3Z"/><path d="M12 9v5"/><path d="M12 18h.01"/>',
+        "next": '<path d="M5 12h12"/><path d="m13 6 6 6-6 6"/><path d="M5 5v14"/>',
+        "radar": '<path d="M12 2 21 7v10l-9 5-9-5V7l9-5Z"/><path d="M12 6 17 9v6l-5 3-5-3V9l5-3Z"/><path d="M12 2v20"/><path d="M3 7l18 10"/><path d="M21 7 3 17"/>',
+        "clock": '<path d="M12 8v5l3 2"/><path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>',
+        "insight": '<path d="M9 18h6"/><path d="M10 22h4"/><path d="M8.6 15.2a6 6 0 1 1 6.8 0c-.8.5-1.4 1.4-1.4 2.3h-4c0-.9-.6-1.8-1.4-2.3Z"/>',
+        "route": '<path d="M6 18a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/><path d="M18 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/><path d="M6 12V8a2 2 0 0 1 2-2h7"/><path d="M9 15h7a2 2 0 0 0 2-2v-1"/>',
+        "load": '<path d="M12 2v5"/><path d="M12 17v5"/><path d="M4.9 4.9 8.4 8.4"/><path d="m15.6 15.6 3.5 3.5"/><path d="M2 12h5"/><path d="M17 12h5"/><path d="m4.9 19.1 3.5-3.5"/><path d="m15.6 8.4 3.5-3.5"/><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/>',
+        "speed": '<path d="M4 17a8 8 0 1 1 16 0"/><path d="M12 17l4-7"/><path d="M8 17h8"/>',
+        "chain": '<path d="M7 7h.01"/><path d="M17 7h.01"/><path d="M7 17h.01"/><path d="M17 17h.01"/><path d="M7 7h10v10H7z"/>',
+    }
+    path = icons.get(name, icons["target"])
+    return f'<svg viewBox="0 0 24 24" aria-hidden="true">{path}</svg>'
 
 
 def radar_svg(metrics: list[tuple[str, int]]) -> str:
@@ -1081,10 +1107,11 @@ def focus_blocks(data: dict) -> list[tuple[str, str, str, str]]:
 
 def render_focus_blocks(data: dict) -> str:
     cards = []
+    icon_names = {"good": "check", "warn": "warn", "info": "next"}
     for label, kind, title, body in focus_blocks(data):
         cards.append(f"""
           <article class="focus-item {kind}">
-            <div class="focus-icon"></div>
+            <div class="icon-shell">{icon_svg(icon_names.get(kind, "target"))}</div>
             <div>
               <h3>{esc(label)}</h3>
               <h4>{esc(title)}</h4>
@@ -1134,15 +1161,129 @@ def render_insights_dark(data: dict) -> str:
         ("球路组织", first_text([stroke[0].get("summary") if stroke else "", chain.get("summary")], "依赖连续调整寻找对抗机会。")),
         ("负荷风险", first_text([issues[0].get("impact") if issues else ""], "强度上升时，如果准备和制动不足，容易让手臂承担过多补救压力。")),
     ]
+    icons = ["insight", "route", "load"]
     return "".join(f"""
       <article class="insight-card">
-        <div class="insight-icon"></div>
+        <div class="icon-shell">{icon_svg(icons[index])}</div>
         <div>
           <h3>{esc(title)}</h3>
           <p>{esc(body)}</p>
         </div>
       </article>
-    """ for title, body in items)
+    """ for index, (title, body) in enumerate(items))
+
+
+def selected_issue_phase(data: dict) -> dict:
+    phases = data.get("phase_review") or data.get("phase_reviews") or []
+    for phase in phases:
+        if phase.get("issue") or phase.get("annotated_slow_clip"):
+            return phase
+    return phases[0] if phases else {}
+
+
+def chain_steps(data: dict) -> list[tuple[str, str, str]]:
+    chain = data.get("kinetic_chain") or {}
+    segments = chain.get("segments") or []
+    rows = []
+    for segment in segments[:4]:
+        label = str(segment.get("label") or segment.get("segment") or "")
+        level = str(segment.get("level") or "watch")
+        cue = str(segment.get("cue") or segment.get("evidence") or "")
+        if label:
+            rows.append((label, level, cue))
+    if rows:
+        return rows
+    return [
+        ("脚步到位", "watch", "先到球旁边"),
+        ("髋躯干传导", "fix", "转体完成偏晚"),
+        ("手臂释放", "watch", "避免最后一刻补救"),
+        ("拍头加速", "unknown", "远机位需谨慎判断"),
+    ]
+
+
+def render_chain_steps(data: dict) -> str:
+    rows = []
+    for index, (label, level, cue) in enumerate(chain_steps(data), start=1):
+        rows.append(f"""
+          <div class="chain-step {esc(level)}">
+            <b>{index}</b>
+            <span>{esc(label)}</span>
+            <small>{esc(cue)}</small>
+          </div>
+        """)
+    return "".join(rows)
+
+
+def top_review_media(data: dict, analysis_dir: Path, asset_dir: Path) -> tuple[str, str, dict]:
+    phase = selected_issue_phase(data)
+    video = rel_media(
+        data.get("top_review_clip")
+        or phase.get("annotated_slow_clip")
+        or phase.get("normal_clip")
+        or phase.get("clip"),
+        analysis_dir,
+        asset_dir,
+    )
+    poster = rel_asset(
+        data.get("top_review_poster")
+        or phase.get("freeze_frame")
+        or phase.get("frame")
+        or data.get("cover_frame"),
+        analysis_dir,
+        asset_dir,
+    )
+    return video, poster, phase
+
+
+def swing_speed_model(data: dict) -> dict:
+    explicit = data.get("swing_speed")
+    if isinstance(explicit, dict) and explicit:
+        return explicit
+    metrics = dict(report_metrics(data))
+    speed_score = int(metrics.get("挥速释放", max(68, report_score(data) - 3)))
+    return {
+        "score": speed_score,
+        "level": "中等偏稳",
+        "summary": "挥速不是主要瓶颈，当前更受准备时机和动力链传导影响。脚步和转体提前后，拍头速度会更自然释放。",
+        "items": [
+            {"label": "启动加速", "value": max(0, min(100, speed_score - 4)), "note": "来球早期准备偏晚，压缩了加速距离。"},
+            {"label": "峰值释放", "value": speed_score, "note": "击球前仍有释放空间，但需要身体先带动。"},
+            {"label": "减速收拍", "value": max(0, min(100, speed_score + 5)), "note": "随挥能完成，打完回位还可更快。"},
+        ],
+    }
+
+
+def render_swing_speed(data: dict) -> str:
+    speed = swing_speed_model(data)
+    score = max(0, min(100, int(float(speed.get("score", 0)))))
+    rows = []
+    for item in speed.get("items", []):
+        value = max(0, min(100, int(float(item.get("value", 0)))))
+        rows.append(f"""
+          <div class="speed-row">
+            <div>
+              <strong>{esc(item.get("label", ""))}</strong>
+              <p>{esc(item.get("note", ""))}</p>
+            </div>
+            <div class="speed-meter"><i style="width:{value}%"></i></div>
+            <b>{value}</b>
+          </div>
+        """)
+    return f"""
+      <section class="panel">
+        <div class="section-body">
+          <h2 class="section-title"><span class="title-icon">{icon_svg("speed")}</span>挥速分析</h2>
+          <div class="speed-hero">
+            <div class="speed-score"><strong>{score}</strong><span>/100</span></div>
+            <div>
+              <h3>{esc(speed.get("level", "挥速评估"))}</h3>
+              <p>{esc(speed.get("summary", ""))}</p>
+            </div>
+          </div>
+          <div class="speed-list">{''.join(rows)}</div>
+        </div>
+      </section>
+    """
 
 
 def render_html(data: dict, analysis_path: Path, outdir: Path) -> str:
@@ -1156,15 +1297,26 @@ def render_html(data: dict, analysis_path: Path, outdir: Path) -> str:
     today = data.get("date") or date.today().isoformat()
     score = report_score(data)
     metrics = report_metrics(data)
+    review_video, review_poster, review_phase = top_review_media(data, analysis_dir, asset_dir)
     summaries = data.get("coach_summary") or []
     summary = first_text(summaries, data.get("one_liner", "动作节奏和动力链报告已生成。"))
-    headline = first_text([data.get("headline"), data.get("main_focus")], "动作节奏清晰，具备继续提升的基础")
+    headline = first_text([data.get("headline"), data.get("main_focus")], "动力链连接清晰度具备提升空间")
     ntrp = data.get("ntrp") or "约 NTRP 3.2"
     confidence = data.get("analysis_confidence") or f"分析置信度 {confidence_label(data.get('confidence', 'medium'))}"
     stage = stage_label(score)
+    review_title = first_text([data.get("top_review_title"), review_phase.get("label"), "针对性问题片段"], "针对性问题片段")
+    review_issue = first_text(
+        [data.get("top_review_note"), review_phase.get("issue"), review_phase.get("change")],
+        "截取最能体现动作链断点的一小段，叠加脚步、转体、手臂释放和拍头加速的动力链标注。",
+    )
     main_body = " ".join(str(s) for s in summaries[1:3]) or str(data.get("one_liner") or "")
     if not main_body:
         main_body = "本报告会把关键判断绑定到具体时间点、画面和慢动作片段，优先指出最值得修正的一处动作链断点。"
+    if review_video:
+        poster_attr = f' poster="{esc(review_poster)}"' if review_poster else ""
+        review_media_html = f'<video controls playsinline preload="metadata"{poster_attr}><source src="{esc(review_video)}" type="video/mp4"></video>'
+    else:
+        review_media_html = image_tag(review_poster or cover, "针对性问题片段")
 
     return f"""<!doctype html>
 <html lang="zh-CN">
@@ -1281,29 +1433,32 @@ def render_html(data: dict, analysis_path: Path, outdir: Path) -> str:
       line-height: 1.62;
     }}
     .replay {{
-      height: 360px;
       padding: 18px;
     }}
     .replay-bg {{
       position: absolute;
       inset: 0;
-      background-image: url("{esc(cover)}");
+      background-image: url("{esc(review_poster or cover)}");
       background-size: cover;
       background-position: center;
       filter: blur(18px) brightness(.7);
       transform: scale(1.08);
       opacity: .75;
     }}
-    .replay img {{
+    .review-shell {{
       position: relative;
       z-index: 2;
-      width: 78%;
-      height: 100%;
+      width: 82%;
       margin: 0 auto;
+    }}
+    .review-shell img, .review-shell video {{
+      width: 100%;
+      aspect-ratio: 16 / 9;
       display: block;
       object-fit: cover;
       border-radius: 14px;
       box-shadow: 0 14px 38px rgba(0,0,0,.32);
+      background: #101626;
     }}
     .replay-label {{
       position: absolute;
@@ -1317,6 +1472,64 @@ def render_html(data: dict, analysis_path: Path, outdir: Path) -> str:
       font-size: 13px;
       font-weight: 900;
     }}
+    .review-note {{
+      position: relative;
+      z-index: 2;
+      width: 82%;
+      margin: 12px auto 0;
+      padding: 11px 14px;
+      border-radius: 14px;
+      background: rgba(16, 22, 37, .74);
+      color: #dfe8f7;
+      font-size: 15px;
+      line-height: 1.5;
+      font-weight: 750;
+    }}
+    .chain-overlay {{
+      position: relative;
+      z-index: 2;
+      width: 82%;
+      margin: 12px auto 0;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }}
+    .chain-step {{
+      min-height: 78px;
+      padding: 10px;
+      border-radius: 13px;
+      background: rgba(14, 20, 34, .78);
+      border: 1px solid rgba(255,255,255,.08);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+    }}
+    .chain-step b {{
+      display: inline-grid;
+      place-items: center;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #2196ff;
+      color: #fff;
+      font-size: 12px;
+      margin-bottom: 7px;
+    }}
+    .chain-step.good b {{ background: #24d86c; }}
+    .chain-step.watch b, .chain-step.warn b {{ background: #ffad22; }}
+    .chain-step.fix b {{ background: #ff3f4f; }}
+    .chain-step span {{
+      display: block;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 900;
+      line-height: 1.25;
+      margin-bottom: 4px;
+    }}
+    .chain-step small {{
+      display: block;
+      color: #b9c4d6;
+      font-size: 11px;
+      line-height: 1.35;
+    }}
     .section-title {{
       display: flex;
       align-items: center;
@@ -1326,12 +1539,15 @@ def render_html(data: dict, analysis_path: Path, outdir: Path) -> str:
       font-size: 23px;
       line-height: 1.2;
     }}
-    .section-title i {{
+    .title-icon {{
       width: 18px;
       height: 18px;
       border-radius: 50%;
       background: #168cff;
       box-shadow: 0 0 16px rgba(22,140,255,.8);
+      display: inline-grid;
+      place-items: center;
+      flex: 0 0 auto;
     }}
     .section-body {{ padding: 24px; }}
     .focus-list, .moment-list, .insight-list {{
@@ -1347,20 +1563,33 @@ def render_html(data: dict, analysis_path: Path, outdir: Path) -> str:
       background: rgba(20, 25, 39, .72);
       box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
     }}
-    .focus-icon, .insight-icon {{
+    .icon-shell {{
       width: 34px;
       height: 34px;
       border-radius: 50%;
       margin-top: 2px;
       background: #168cff;
       box-shadow: 0 0 18px rgba(22,140,255,.45);
+      display: inline-grid;
+      place-items: center;
     }}
-    .focus-item.good .focus-icon {{ background: #24d86c; }}
-    .focus-item.warn .focus-icon {{ background: #ffad22; }}
-    .focus-item.info .focus-icon {{ background: #168cff; }}
-    .insight-card:nth-child(1) .insight-icon {{ background: #9b4dff; }}
-    .insight-card:nth-child(2) .insight-icon {{ background: #18a8c9; }}
-    .insight-card:nth-child(3) .insight-icon {{ background: #ff3f4f; }}
+    .title-icon svg, .icon-shell svg, .badge svg {{
+      width: 18px;
+      height: 18px;
+      stroke: #fff;
+      fill: none;
+      stroke-width: 2.4;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }}
+    .title-icon svg {{ width: 14px; height: 14px; }}
+    .badge svg {{ width: 20px; height: 20px; }}
+    .focus-item.good .icon-shell {{ background: #24d86c; }}
+    .focus-item.warn .icon-shell {{ background: #ffad22; }}
+    .focus-item.info .icon-shell {{ background: #168cff; }}
+    .insight-card:nth-child(1) .icon-shell {{ background: #9b4dff; }}
+    .insight-card:nth-child(2) .icon-shell {{ background: #18a8c9; }}
+    .insight-card:nth-child(3) .icon-shell {{ background: #ff3f4f; }}
     .focus-item h3, .focus-item h4, .insight-card h3, .moment-dark h3, .moment-dark h4 {{
       margin: 0;
     }}
@@ -1428,6 +1657,90 @@ def render_html(data: dict, analysis_path: Path, outdir: Path) -> str:
       font-size: 14px;
       text-align: right;
     }}
+    .speed-hero {{
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 16px;
+      padding: 18px;
+      border-radius: 16px;
+      background: rgba(20, 25, 39, .72);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+      margin-bottom: 14px;
+    }}
+    .speed-score {{
+      width: 94px;
+      height: 94px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      align-content: center;
+      background:
+        radial-gradient(circle at 50% 50%, #24334d 0 52%, transparent 53%),
+        conic-gradient(#20a8ff 0deg, #147cff 276deg, rgba(255,255,255,.12) 276deg 360deg);
+      box-shadow: 0 12px 28px rgba(20, 124, 255, .22);
+    }}
+    .speed-score strong {{
+      display: block;
+      font-size: 28px;
+      line-height: 1;
+      color: #fff;
+    }}
+    .speed-score span {{
+      color: #aeb9cc;
+      font-size: 12px;
+      font-weight: 900;
+    }}
+    .speed-hero h3 {{
+      margin: 2px 0 7px;
+      color: #fff;
+      font-size: 20px;
+    }}
+    .speed-hero p {{
+      margin: 0;
+      color: #c9d1e1;
+      font-size: 15px;
+      line-height: 1.58;
+    }}
+    .speed-list {{
+      display: grid;
+      gap: 11px;
+    }}
+    .speed-row {{
+      display: grid;
+      grid-template-columns: minmax(110px, 1fr) 1.2fr 34px;
+      gap: 12px;
+      align-items: center;
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: rgba(20, 25, 39, .62);
+    }}
+    .speed-row strong {{
+      color: #fff;
+      font-size: 15px;
+    }}
+    .speed-row p {{
+      margin: 3px 0 0;
+      color: #aeb9cc;
+      font-size: 12px;
+      line-height: 1.35;
+    }}
+    .speed-meter {{
+      height: 9px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.12);
+      overflow: hidden;
+    }}
+    .speed-meter i {{
+      display: block;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #15d4b3, #20a8ff);
+    }}
+    .speed-row b {{
+      color: #22b7ff;
+      text-align: right;
+      font-size: 13px;
+    }}
     .time-badge {{
       width: 58px;
       min-height: 48px;
@@ -1451,12 +1764,6 @@ def render_html(data: dict, analysis_path: Path, outdir: Path) -> str:
       font-size: 20px;
       margin-bottom: 7px;
     }}
-    .footer {{
-      color: #7f8ca5;
-      text-align: center;
-      font-size: 16px;
-      padding: 8px 0 0;
-    }}
     @media (max-width: 620px) {{
       .page {{ padding: 34px 13px 28px; }}
       .analysis-card {{ padding: 24px 18px 24px; }}
@@ -1466,9 +1773,15 @@ def render_html(data: dict, analysis_path: Path, outdir: Path) -> str:
       .badge {{ font-size: 15px; padding: 9px 18px; }}
       .analysis-card h1 {{ font-size: 21px; }}
       .analysis-card p {{ font-size: 15px; line-height: 1.55; }}
-      .replay {{ height: 180px; padding: 12px; }}
-      .replay img {{ width: 76%; border-radius: 10px; }}
+      .replay {{ padding: 12px; }}
+      .review-shell, .review-note, .chain-overlay {{ width: 84%; }}
+      .review-shell img, .review-shell video {{ border-radius: 10px; }}
       .replay-label {{ left: 58px; top: 20px; font-size: 11px; }}
+      .review-note {{ font-size: 12px; padding: 9px 11px; }}
+      .chain-overlay {{ grid-template-columns: repeat(2, 1fr); gap: 7px; }}
+      .chain-step {{ min-height: 70px; padding: 9px; }}
+      .chain-step span {{ font-size: 12px; }}
+      .chain-step small {{ font-size: 10px; }}
       .section-body {{ padding: 18px 14px; }}
       .section-title {{ font-size: 18px; }}
       .focus-item, .moment-dark, .insight-card {{ padding: 14px; gap: 11px; }}
@@ -1477,6 +1790,13 @@ def render_html(data: dict, analysis_path: Path, outdir: Path) -> str:
       .focus-item h4, .moment-dark h4 {{ font-size: 14px; }}
       .metric-row {{ grid-template-columns: 72px 1fr 28px; font-size: 12px; }}
       .time-badge {{ width: 49px; font-size: 11px; }}
+      .speed-hero {{ grid-template-columns: 1fr; gap: 12px; padding: 14px; }}
+      .speed-score {{ width: 76px; height: 76px; }}
+      .speed-score strong {{ font-size: 23px; }}
+      .speed-hero h3 {{ font-size: 16px; }}
+      .speed-hero p {{ font-size: 13px; }}
+      .speed-row {{ grid-template-columns: 1fr; gap: 8px; padding: 12px; }}
+      .speed-row b {{ text-align: left; }}
     }}
   </style>
 </head>
@@ -1485,8 +1805,8 @@ def render_html(data: dict, analysis_path: Path, outdir: Path) -> str:
     <section class="panel analysis-card">
       <p class="eyebrow">AI 综合分析报告</p>
       <div class="score-line"><strong>{score}</strong><span>/100</span></div>
-      <p class="stage">已进入{esc(stage)}，{esc(summary)}</p>
-      <div class="badge">掌控全场的节奏舞者</div>
+      <p class="stage">已进入{esc(stage)}，本评分基于准备启动、动力链传导、击球时机、挥速释放、随挥回收与身体稳定的综合动作评定。</p>
+      <div class="badge">{icon_svg("chain")}动作链综合评定</div>
       <div class="chips">
         <span class="chip primary">进阶</span>
         <span class="chip">{esc(ntrp)}</span>
@@ -1498,20 +1818,22 @@ def render_html(data: dict, analysis_path: Path, outdir: Path) -> str:
 
     <section class="panel replay">
       <div class="replay-bg"></div>
-      <div class="replay-label">本场回顾</div>
-      {image_tag(cover, "本场回顾")}
+      <div class="replay-label">{esc(review_title)}</div>
+      <div class="review-shell">{review_media_html}</div>
+      <div class="review-note">{esc(review_issue)}</div>
+      <div class="chain-overlay">{render_chain_steps(data)}</div>
     </section>
 
     <section class="panel">
       <div class="section-body">
-        <h2 class="section-title"><i></i>本次诊断重点</h2>
+        <h2 class="section-title"><span class="title-icon">{icon_svg("target")}</span>本次诊断重点</h2>
         <div class="focus-list">{render_focus_blocks(data)}</div>
       </div>
     </section>
 
     <section class="panel">
       <div class="section-body">
-        <h2 class="section-title"><i></i>能力雷达</h2>
+        <h2 class="section-title"><span class="title-icon">{icon_svg("radar")}</span>能力雷达</h2>
         <div class="radar-wrap">
           {radar_svg(metrics)}
           <div class="metric-list">{render_metric_bars(metrics)}</div>
@@ -1519,21 +1841,21 @@ def render_html(data: dict, analysis_path: Path, outdir: Path) -> str:
       </div>
     </section>
 
+    {render_swing_speed(data)}
+
     <section class="panel">
       <div class="section-body">
-        <h2 class="section-title"><i></i>关键时刻</h2>
+        <h2 class="section-title"><span class="title-icon">{icon_svg("clock")}</span>关键时刻</h2>
         <div class="moment-list">{render_key_moments_dark(data)}</div>
       </div>
     </section>
 
     <section class="panel">
       <div class="section-body">
-        <h2 class="section-title"><i></i>进阶洞察</h2>
+        <h2 class="section-title"><span class="title-icon">{icon_svg("insight")}</span>进阶洞察</h2>
         <div class="insight-list">{render_insights_dark(data)}</div>
       </div>
     </section>
-
-    <footer class="footer">小球圈 · AI 综合分析</footer>
   </main>
 </body>
 </html>"""

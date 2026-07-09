@@ -215,11 +215,15 @@ Deliver these files when feasible:
 The default report visual style should be a dark mobile-first comprehensive analysis card layout:
 
 - top score card with `score`, stage label, chips, headline, and coach summary
-- replay image card with a blurred video-frame background
-- diagnosis focus cards for highlight, improvement, and next step
-- ability radar and metric bars
+- score copy should read as a comprehensive movement/action evaluation, with kinetic-chain quality as a first-class criterion
+- top targeted review video or frame card with a blurred video-frame background, clipped around the most representative problem moment
+- kinetic-chain labels on the top review card, covering footwork, hip/trunk transfer, arm release, and racket-head acceleration when visible
+- icon-led diagnosis focus cards for highlight, improvement, and next step
+- ability radar and metric bars, including swing-speed release when evidence supports it
+- swing-speed analysis module with release score, acceleration/release/deceleration notes, and coaching implication
 - key moment cards tied to timestamps
 - advanced insight cards for playing style, rally organization, and load/risk notes
+- no footer branding or bottom app mark in public share reports
 
 In the final response, link the HTML report, PNG, PDF, and 2-4 representative visual assets using absolute paths.
 

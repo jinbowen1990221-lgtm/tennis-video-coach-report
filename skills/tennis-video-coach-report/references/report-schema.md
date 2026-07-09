@@ -18,10 +18,15 @@ Create `analysis.json` in the run folder, then render it with `scripts/render_te
   "main_focus": "提前转肩",
   "headline": "动作柔顺舒展，兼具较好的节奏韵律与回球控制力。",
   "score": 80,
+  "action_score": 80,
   "ntrp": "约 NTRP 3.2",
   "analysis_confidence": "分析置信度 82%",
   "confidence": "medium",
   "cover_frame": "candidate_frames/candidate_03_t038.50.jpg",
+  "top_review_title": "动力链断点片段",
+  "top_review_note": "这一小段最能看出脚步到位、转肩和拍头释放之间的时间差。",
+  "top_review_clip": "swing_clips/middle-中段/swing_slow_annotated.mp4",
+  "top_review_poster": "swing_clips/middle-中段/freeze_annotated.jpg",
   "coach_summary": [
     "球已经出来了，但拍子还没到右后方，所以你会感觉自己被球追着打。",
     "随挥比准备动作更好，说明身体已经愿意跟着球拍过去。"
@@ -113,9 +118,19 @@ Create `analysis.json` in the run folder, then render it with `scripts/render_te
     {"label": "动力链", "value": 76},
     {"label": "击球时机", "value": 81},
     {"label": "随挥收拍", "value": 84},
-    {"label": "拍面控制", "value": 80},
+    {"label": "挥速释放", "value": 80},
     {"label": "身体稳定", "value": 79}
   ],
+  "swing_speed": {
+    "score": 78,
+    "level": "中等偏稳",
+    "summary": "挥速释放受准备时机和躯干传导影响，身体先带动后，拍头速度会更自然出来。",
+    "items": [
+      {"label": "启动加速", "value": 74, "note": "来球早期准备偏晚，压缩了加速距离。"},
+      {"label": "峰值释放", "value": 78, "note": "击球前仍有释放空间，但需要身体先带动。"},
+      {"label": "减速收拍", "value": 83, "note": "随挥能完成，打完回位还可更快。"}
+    ]
+  },
   "evidence_frames": [
     {
       "timestamp": "112.75s",
@@ -245,10 +260,15 @@ Create `analysis.json` in the run folder, then render it with `scripts/render_te
 
 - `confidence`: use `high`, `medium`, or `low`.
 - `score`: optional 0-100 top-line report score. If omitted, the renderer derives a conservative score from confidence and kinetic-chain level.
+- `action_score` or `movement_score`: optional 0-100 comprehensive movement score. When present, the renderer can use it as the top-line action evaluation score.
 - `headline`: optional short top-card conclusion. If omitted, the renderer uses `main_focus`.
 - `ntrp`: optional display chip such as `约 NTRP 3.2`.
 - `analysis_confidence`: optional display chip such as `分析置信度 82%`.
 - `cover_frame`: choose a good-looking frame, not necessarily the problem frame.
+- `top_review_clip`: optional short video for the top review card. Prefer the most representative problem segment, ideally a slow-motion or annotated clip.
+- `top_review_poster`: optional frame shown behind/inside the top review video card.
+- `top_review_title`: optional label for the top review card, such as `动力链断点片段`.
+- `top_review_note`: optional one-sentence explanation of what to watch in the top clip.
 - `highlights`: 1-3 items.
 - `issues`: 1-3 items, but prefer one main issue for beginners.
 - `phase_review`: optional but required when the user asks for early/middle/late comparison or slow-motion clips.
@@ -267,7 +287,10 @@ Create `analysis.json` in the run folder, then render it with `scripts/render_te
 - `stroke_analysis[].phases[].assessment`: use `good`, `watch`, `fix`, or `unknown`.
 - `kinetic_chain`: optional body-segment analysis. Use this when there is enough video to reason about feet-to-racket sequence.
 - `kinetic_chain.overall_level` and `kinetic_chain.segments[].level`: use `good`, `watch`, `fix`, or `unknown`.
-- `ability_radar`: optional 3-6 item metric list for the dark mobile report radar. Each item uses `label` and numeric `value` from 0-100. If omitted, the renderer derives values from `kinetic_chain`.
+- `ability_radar`: optional 3-6 item metric list for the dark mobile report radar. Each item uses `label` and numeric `value` from 0-100. Prefer action-chain labels such as `准备启动`, `动力链`, `击球时机`, `挥速释放`, `随挥收拍`, and `身体稳定`. If omitted, the renderer derives values from `kinetic_chain`.
+- `swing_speed`: optional swing-speed release analysis. Use when there is enough video to judge acceleration rhythm; state uncertainty rather than pretending to know exact racket speed.
+- `swing_speed.score`: optional 0-100 score for visible acceleration and release quality.
+- `swing_speed.items[]`: short rows with `label`, numeric `value`, and `note`, commonly `启动加速`, `峰值释放`, and `减速收拍`.
 - `evidence_frames`: optional claim-to-frame map. Include at least 2-4 items for mechanics-heavy reports.
 - `confidence_notes`: optional report-level uncertainty bullets. Use this to explain camera limits without weakening evidence-backed claims.
 - `pose_analysis`: optional pose/skeleton review. Use this when key frames have real pose-estimation overlays.
