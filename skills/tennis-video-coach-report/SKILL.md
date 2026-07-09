@@ -226,11 +226,14 @@ Deliver these files when feasible:
 - `report/tennis-report-mobile.png`
 - `report/tennis-report.pdf`
 
-The default report visual style should be a dark mobile-first comprehensive analysis card layout:
+The default report visual style should be a blue mobile-first assessment report layout, inspired by polished education/test result reports:
 
-- top score card with `score`, stage label, chips, headline, and coach summary
+- blue report background with subtle decorative assessment texture
+- white rounded report sections stacked vertically
+- centered light-blue section title tabs such as `测评得分`, `动作能力分项`, `技能点得分分析`, and `教练反馈`
+- top score card with circular gauge, `score`, stage label, chips, headline, and coach summary
 - score copy should read as a comprehensive movement/action evaluation, with kinetic-chain quality as a first-class criterion
-- top targeted review video or frame card with a blurred video-frame background, clipped around the most representative problem moment
+- targeted review video or frame card clipped around the most representative problem moment
 - kinetic-chain labels on the top review card, covering footwork, hip/trunk transfer, arm release, and racket-head acceleration when visible
 - icon-led diagnosis focus cards for highlight, improvement, and next step
 - ability radar and metric bars, including swing-speed release when evidence supports it

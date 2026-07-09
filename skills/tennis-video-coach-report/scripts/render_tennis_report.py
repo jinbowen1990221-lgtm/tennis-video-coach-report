@@ -1363,6 +1363,7 @@ def render_html(data: dict, analysis_path: Path, outdir: Path) -> str:
         review_media_html = f'<video controls playsinline preload="metadata"{poster_attr}><source src="{esc(review_video)}" type="video/mp4"></video>'
     else:
         review_media_html = image_tag(review_poster or cover, "针对性问题片段")
+    score_angle = max(0, min(360, int(round(score * 3.6))))
 
     return f"""<!doctype html>
 <html lang="zh-CN">
@@ -1821,6 +1822,301 @@ def render_html(data: dict, analysis_path: Path, outdir: Path) -> str:
       font-size: 20px;
       margin-bottom: 7px;
     }}
+    .report-header {{
+      position: relative;
+      min-height: 112px;
+      padding: 12px 8px 20px;
+      color: #fff;
+      text-align: left;
+    }}
+    .report-header::before {{
+      content: "";
+      position: absolute;
+      inset: -42px -20px auto;
+      height: 170px;
+      background:
+        radial-gradient(circle at 17% 42%, rgba(255,255,255,.24) 0 2px, transparent 3px),
+        radial-gradient(circle at 74% 22%, rgba(255,255,255,.28) 0 3px, transparent 4px),
+        linear-gradient(135deg, rgba(124, 188, 255, .55), rgba(82, 118, 238, .08));
+      opacity: .8;
+      pointer-events: none;
+    }}
+    .report-title {{
+      position: relative;
+      margin: 0;
+      font-size: 34px;
+      line-height: 1.08;
+      font-weight: 950;
+      color: #fff;
+      text-shadow: 0 8px 22px rgba(38, 70, 150, .24);
+    }}
+    .report-subtitle {{
+      position: relative;
+      margin: 4px 0 0;
+      color: rgba(255,255,255,.78);
+      font-size: 20px;
+      font-weight: 800;
+      font-style: italic;
+    }}
+    body {{
+      background: #6594f2;
+      color: #26345c;
+    }}
+    .page {{
+      width: min(100%, 760px);
+      padding: 20px 22px 48px;
+      background:
+        radial-gradient(circle at 8% 8%, rgba(255,255,255,.22) 0 2px, transparent 3px),
+        radial-gradient(circle at 90% 12%, rgba(255,255,255,.22) 0 2px, transparent 3px),
+        linear-gradient(180deg, #6594f2 0%, #5d8ef0 48%, #5f91ee 100%);
+    }}
+    .panel {{
+      overflow: visible;
+      border-radius: 11px;
+      background: rgba(255,255,255,.96);
+      border: 1px solid rgba(255,255,255,.75);
+      box-shadow: 0 9px 18px rgba(50, 91, 178, .16);
+      margin-bottom: 18px;
+      color: #324068;
+    }}
+    .section-body, .analysis-card {{
+      padding: 24px 28px 26px;
+    }}
+    .section-title {{
+      justify-content: center;
+      width: max-content;
+      min-width: 180px;
+      max-width: 88%;
+      margin: -26px auto 18px;
+      padding: 9px 30px 8px;
+      border-radius: 0 0 18px 18px;
+      background: linear-gradient(180deg, #eefaff, #d9f3ff);
+      color: #496cae;
+      font-size: 20px;
+      font-weight: 950;
+      box-shadow: 0 5px 10px rgba(75, 125, 215, .08);
+    }}
+    .title-icon {{
+      width: 0;
+      height: 0;
+      overflow: hidden;
+      box-shadow: none;
+      background: transparent;
+    }}
+    .analysis-card {{
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      gap: 22px;
+      align-items: center;
+      text-align: left;
+    }}
+    .analysis-card .eyebrow {{
+      grid-column: 1 / -1;
+      justify-self: center;
+      width: max-content;
+      min-width: 180px;
+      margin: -24px auto 0;
+      padding: 9px 30px 8px;
+      border-radius: 0 0 18px 18px;
+      background: linear-gradient(180deg, #eefaff, #d9f3ff);
+      color: #496cae;
+      font-size: 19px;
+      font-weight: 950;
+    }}
+    .score-line {{
+      grid-row: 2 / span 4;
+      justify-self: center;
+      width: 186px;
+      height: 186px;
+      margin: 4px 0 0;
+      display: grid;
+      place-items: center;
+      align-content: center;
+      gap: 2px;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 50% 50%, #fff 0 56%, transparent 57%),
+        conic-gradient(#4768f4 0deg {score_angle}deg, #ffbd4a {score_angle}deg 278deg, #ff754f 278deg 360deg);
+      box-shadow: inset 0 0 0 12px rgba(235, 242, 255, .95), 0 8px 20px rgba(75, 105, 210, .18);
+    }}
+    .score-line strong {{
+      color: #405fde;
+      font-size: 46px;
+      line-height: 1;
+      font-weight: 950;
+    }}
+    .score-line span {{
+      color: #526181;
+      font-size: 14px;
+      font-weight: 900;
+    }}
+    .stage {{
+      margin: 0;
+      max-width: none;
+      color: #496cae;
+      font-size: 16px;
+      line-height: 1.55;
+      font-weight: 850;
+    }}
+    .badge {{
+      justify-self: start;
+      margin: 0;
+      padding: 8px 16px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #6688ff, #43b9ff);
+      font-size: 14px;
+      box-shadow: 0 7px 16px rgba(78, 113, 235, .18);
+    }}
+    .chips {{
+      justify-content: flex-start;
+      gap: 8px;
+      margin: 0;
+    }}
+    .chip {{
+      background: #edf4ff;
+      color: #53699a;
+      border: 1px solid #dbe8ff;
+      font-size: 12px;
+      padding: 6px 11px;
+    }}
+    .chip.primary {{
+      background: #e8f8ff;
+      color: #2578d8;
+    }}
+    .analysis-card h1 {{
+      margin: 0;
+      color: #26345c;
+      font-size: 21px;
+      line-height: 1.28;
+    }}
+    .analysis-card p {{
+      color: #5f6c89;
+      font-size: 14px;
+      line-height: 1.7;
+    }}
+    .replay {{
+      padding: 24px 28px 26px;
+    }}
+    .replay::before {{
+      content: "动作片段回放";
+      display: block;
+      width: max-content;
+      min-width: 180px;
+      margin: -24px auto 18px;
+      padding: 9px 30px 8px;
+      border-radius: 0 0 18px 18px;
+      background: linear-gradient(180deg, #eefaff, #d9f3ff);
+      color: #496cae;
+      font-size: 19px;
+      font-weight: 950;
+      text-align: center;
+    }}
+    .replay-bg {{
+      display: none;
+    }}
+    .replay-label {{
+      position: static;
+      display: inline-block;
+      margin: 0 0 10px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: #edf4ff;
+      color: #496cae;
+      font-size: 13px;
+    }}
+    .review-shell {{
+      width: 100%;
+    }}
+    .review-shell img, .review-shell video {{
+      border-radius: 8px;
+      box-shadow: none;
+      border: 1px solid #dfe9ff;
+      background: #edf4ff;
+    }}
+    .review-note {{
+      width: 100%;
+      margin: 12px 0 0;
+      background: #f4f8ff;
+      color: #516081;
+      border: 1px solid #e7efff;
+      font-size: 14px;
+    }}
+    .chain-overlay {{
+      width: 100%;
+      grid-template-columns: repeat(4, 1fr);
+    }}
+    .chain-step {{
+      min-height: 88px;
+      background: #f8fbff;
+      border: 1px solid #e5edff;
+      box-shadow: none;
+    }}
+    .chain-step b {{
+      background: #5b7cff;
+    }}
+    .chain-step span {{
+      color: #334166;
+    }}
+    .chain-step small {{
+      color: #6a7592;
+    }}
+    .focus-item, .moment-dark, .insight-card, .speed-hero, .speed-row {{
+      background: #f7f9ff;
+      border: 1px solid #edf2ff;
+      box-shadow: none;
+      border-radius: 9px;
+    }}
+    .focus-item h3, .focus-item h4, .insight-card h3, .moment-dark h3, .moment-dark h4, .speed-hero h3, .speed-row strong {{
+      color: #344265;
+    }}
+    .focus-item p, .moment-dark p, .insight-card p, .speed-hero p, .speed-row p {{
+      color: #66718c;
+    }}
+    .icon-shell {{
+      background: #e6f3ff;
+      box-shadow: none;
+    }}
+    .icon-shell svg {{
+      stroke: #5575ef;
+    }}
+    .radar text {{
+      fill: #435179;
+    }}
+    .metric-row {{
+      grid-template-columns: 92px 1fr 42px;
+      color: #435179;
+    }}
+    .metric-track, .speed-meter {{
+      height: 11px;
+      background: #e6ebf6;
+    }}
+    .metric-track i, .speed-meter i {{
+      background: linear-gradient(90deg, #596bf3, #4eb7ff);
+    }}
+    .metric-row b, .speed-row b {{
+      color: #297bff;
+    }}
+    .score-note {{
+      background: #f3f8ff;
+      color: #66718c;
+      border: 1px solid #e5efff;
+    }}
+    .speed-score {{
+      background:
+        radial-gradient(circle at 50% 50%, #fff 0 54%, transparent 55%),
+        conic-gradient(#4e71ff 0deg, #46bdf4 276deg, #e6ebf6 276deg 360deg);
+      box-shadow: inset 0 0 0 8px #eef5ff;
+    }}
+    .speed-score strong {{
+      color: #405fde;
+    }}
+    .time-badge {{
+      background: #e7f3ff;
+      color: #3477d9;
+    }}
+    .time-badge span {{
+      color: #7f8aa5;
+    }}
     @media (max-width: 620px) {{
       .page {{ padding: 34px 13px 28px; }}
       .analysis-card {{ padding: 24px 18px 24px; }}
@@ -1854,13 +2150,33 @@ def render_html(data: dict, analysis_path: Path, outdir: Path) -> str:
       .speed-hero p {{ font-size: 13px; }}
       .speed-row {{ grid-template-columns: 1fr; gap: 8px; padding: 12px; }}
       .speed-row b {{ text-align: left; }}
+      .report-header {{ min-height: 96px; padding: 8px 4px 16px; }}
+      .report-title {{ font-size: 28px; }}
+      .report-subtitle {{ font-size: 17px; }}
+      .analysis-card {{ grid-template-columns: 1fr; text-align: center; gap: 14px; }}
+      .analysis-card .eyebrow {{ margin-top: -24px; font-size: 17px; }}
+      .score-line {{ grid-row: auto; width: 156px; height: 156px; justify-self: center; }}
+      .score-line strong {{ font-size: 40px; }}
+      .score-line span {{ font-size: 13px; }}
+      .stage {{ font-size: 14px; }}
+      .badge {{ justify-self: center; }}
+      .chips {{ justify-content: center; }}
+      .chain-overlay {{ width: 100%; grid-template-columns: repeat(2, 1fr); }}
+      .replay-label {{ position: static; font-size: 12px; }}
+      .review-shell, .review-note {{ width: 100%; }}
+      .metric-row {{ grid-template-columns: 76px 1fr 30px; }}
     }}
   </style>
 </head>
 <body>
   <main class="page">
+    <header class="report-header">
+      <h1 class="report-title">网球动作能力测试</h1>
+      <p class="report-subtitle">Tennis Movement Test</p>
+    </header>
+
     <section class="panel analysis-card">
-      <p class="eyebrow">AI 综合分析报告</p>
+      <p class="eyebrow">测评得分</p>
       <div class="score-line"><strong>{score}</strong><span>/100</span></div>
       <p class="stage">已进入{esc(stage)}，本评分基于准备启动、动力链传导、击球时机、挥速释放、随挥回收与身体稳定的综合动作评定。</p>
       <div class="badge">{icon_svg("chain")}动作链综合评定</div>
@@ -1873,24 +2189,9 @@ def render_html(data: dict, analysis_path: Path, outdir: Path) -> str:
       <p>{esc(main_body)}</p>
     </section>
 
-    <section class="panel replay">
-      <div class="replay-bg"></div>
-      <div class="replay-label">{esc(review_title)}</div>
-      <div class="review-shell">{review_media_html}</div>
-      <div class="review-note">{esc(review_issue)}</div>
-      <div class="chain-overlay">{render_chain_steps(data)}</div>
-    </section>
-
     <section class="panel">
       <div class="section-body">
-        <h2 class="section-title"><span class="title-icon">{icon_svg("target")}</span>本次诊断重点</h2>
-        <div class="focus-list">{render_focus_blocks(data)}</div>
-      </div>
-    </section>
-
-    <section class="panel">
-      <div class="section-body">
-        <h2 class="section-title"><span class="title-icon">{icon_svg("radar")}</span>能力雷达</h2>
+        <h2 class="section-title"><span class="title-icon">{icon_svg("radar")}</span>动作能力分项</h2>
         <div class="radar-wrap">
           {radar_svg(metrics)}
           <div class="metric-list">{render_metric_bars(metrics)}</div>
@@ -1899,20 +2200,35 @@ def render_html(data: dict, analysis_path: Path, outdir: Path) -> str:
       </div>
     </section>
 
-    {render_swing_speed(data)}
-
     <section class="panel">
       <div class="section-body">
-        <h2 class="section-title"><span class="title-icon">{icon_svg("clock")}</span>关键时刻</h2>
+        <h2 class="section-title"><span class="title-icon">{icon_svg("target")}</span>技能点得分分析</h2>
+        <div class="focus-list">{render_focus_blocks(data)}</div>
+      </div>
+    </section>
+
+    {render_swing_speed(data)}
+    
+    <section class="panel">
+      <div class="section-body">
+        <h2 class="section-title"><span class="title-icon">{icon_svg("clock")}</span>关键片段分析</h2>
         <div class="moment-list">{render_key_moments_dark(data)}</div>
       </div>
     </section>
 
     <section class="panel">
       <div class="section-body">
-        <h2 class="section-title"><span class="title-icon">{icon_svg("insight")}</span>进阶洞察</h2>
+        <h2 class="section-title"><span class="title-icon">{icon_svg("insight")}</span>教练反馈</h2>
         <div class="insight-list">{render_insights_dark(data)}</div>
       </div>
+    </section>
+
+    <section class="panel replay">
+      <div class="replay-bg"></div>
+      <div class="replay-label">{esc(review_title)}</div>
+      <div class="review-shell">{review_media_html}</div>
+      <div class="review-note">{esc(review_issue)}</div>
+      <div class="chain-overlay">{render_chain_steps(data)}</div>
     </section>
   </main>
 </body>
