@@ -948,12 +948,46 @@ def first_text(values: list[object], fallback: str = "") -> str:
     return fallback
 
 
+def score_value(value: object) -> int | None:
+    if isinstance(value, (int, float)):
+        return max(0, min(100, int(round(float(value)))))
+    if isinstance(value, str) and value.strip():
+        try:
+            return max(0, min(100, int(round(float(value)))))
+        except ValueError:
+            return None
+    return None
+
+
+def scoring_items(data: dict) -> list[dict]:
+    scoring = data.get("scoring") or data.get("movement_scoring") or {}
+    if isinstance(scoring, dict):
+        for key in ("items", "metrics", "breakdown"):
+            items = scoring.get(key)
+            if isinstance(items, list) and items:
+                return [item for item in items if isinstance(item, dict)]
+    for key in ("movement_scores", "score_breakdown", "ability_radar"):
+        items = data.get(key)
+        if isinstance(items, list) and items:
+            return [item for item in items if isinstance(item, dict)]
+    return []
+
+
 def report_score(data: dict) -> int:
+    scoring = data.get("scoring") or data.get("movement_scoring") or {}
+    if isinstance(scoring, dict):
+        explicit = score_value(scoring.get("overall") or scoring.get("score") or scoring.get("action_score"))
+        if explicit is not None:
+            return explicit
     if isinstance(data.get("score"), (int, float)):
         return max(0, min(100, int(round(float(data["score"])))))
     action = data.get("action_score") or data.get("movement_score")
-    if isinstance(action, (int, float)):
-        return max(0, min(100, int(round(float(action)))))
+    explicit_action = score_value(action)
+    if explicit_action is not None:
+        return explicit_action
+    metric_values = [value for _, value in report_metrics(data) if value > 0]
+    if metric_values:
+        return int(round(sum(metric_values) / len(metric_values)))
     chain = data.get("kinetic_chain") or {}
     level = str(chain.get("overall_level") or "").lower()
     if level == "good":
@@ -962,12 +996,7 @@ def report_score(data: dict) -> int:
         return 76
     if level == "unknown":
         return 72
-    confidence = str(data.get("confidence") or "").lower()
-    if confidence == "high":
-        return 86
-    if confidence == "low":
-        return 74
-    return 80
+    return 0
 
 
 def stage_label(score: int) -> str:
@@ -981,26 +1010,18 @@ def stage_label(score: int) -> str:
 
 
 def report_metrics(data: dict) -> list[tuple[str, int]]:
-    explicit = data.get("ability_radar")
-    if isinstance(explicit, list) and explicit:
+    explicit = scoring_items(data)
+    if explicit:
         rows = []
         for row in explicit:
-            if isinstance(row, dict):
-                label = str(row.get("label") or row.get("name") or "")
-                value = row.get("value", 0)
-                if label:
-                    rows.append((label, max(0, min(100, int(float(value))))))
+            label = str(row.get("label") or row.get("name") or row.get("metric") or "")
+            value = score_value(row.get("value") or row.get("score"))
+            if label and value is not None:
+                rows.append((label, value))
         if rows:
             return rows[:6]
 
-    base = {
-        "准备启动": 80,
-        "动力链": 78,
-        "击球时机": 79,
-        "挥速释放": 77,
-        "随挥收拍": 82,
-        "身体稳定": 79,
-    }
+    base = dict.fromkeys(["准备启动", "动力链", "击球时机", "挥速释放", "随挥收拍", "身体稳定"], 0)
     chain = data.get("kinetic_chain") or {}
     for segment in chain.get("segments", []):
         label = str(segment.get("label") or "")
@@ -1019,9 +1040,22 @@ def report_metrics(data: dict) -> list[tuple[str, int]]:
     speed = data.get("swing_speed") or {}
     if isinstance(speed, dict):
         value = speed.get("score") or speed.get("release_score")
-        if isinstance(value, (int, float)):
-            base["挥速释放"] = max(0, min(100, int(float(value))))
-    return list(base.items())
+        speed_value = score_value(value)
+        if speed_value is not None:
+            base["挥速释放"] = speed_value
+    return [(label, value) for label, value in base.items() if value > 0]
+
+
+def scoring_note(data: dict) -> str:
+    scoring = data.get("scoring") or data.get("movement_scoring") or {}
+    if isinstance(scoring, dict):
+        note = first_text([scoring.get("summary"), scoring.get("method_note"), scoring.get("evidence_note")])
+        if note:
+            return note
+    readable = len(data.get("evidence_frames") or []) + len(data.get("phase_review") or data.get("phase_reviews") or [])
+    if readable:
+        return f"分数基于视频中 {readable} 组可读动作片段、关键帧和慢动作观察生成。"
+    return "分数仅在视频动作证据可读时生成；证据不足的项目不应强行评分。"
 
 
 def icon_svg(name: str) -> str:
@@ -1240,7 +1274,18 @@ def swing_speed_model(data: dict) -> dict:
     if isinstance(explicit, dict) and explicit:
         return explicit
     metrics = dict(report_metrics(data))
-    speed_score = int(metrics.get("挥速释放", max(68, report_score(data) - 3)))
+    speed_score = int(metrics.get("挥速释放", 0))
+    if speed_score <= 0:
+        return {
+            "score": 0,
+            "level": "视频证据不足",
+            "summary": "当前视频或分析数据不足以单独判断挥速释放，不应强行给出挥速分。",
+            "items": [
+                {"label": "启动加速", "value": 0, "note": "需要可读的准备到触球完整片段。"},
+                {"label": "峰值释放", "value": 0, "note": "需要能看到拍头进入击球区的慢动作。"},
+                {"label": "减速收拍", "value": 0, "note": "需要能看到击球后随挥和回位。"},
+            ],
+        }
     return {
         "score": speed_score,
         "level": "中等偏稳",
@@ -1309,6 +1354,7 @@ def render_html(data: dict, analysis_path: Path, outdir: Path) -> str:
         [data.get("top_review_note"), review_phase.get("issue"), review_phase.get("change")],
         "截取最能体现动作链断点的一小段，叠加脚步、转体、手臂释放和拍头加速的动力链标注。",
     )
+    score_note = scoring_note(data)
     main_body = " ".join(str(s) for s in summaries[1:3]) or str(data.get("one_liner") or "")
     if not main_body:
         main_body = "本报告会把关键判断绑定到具体时间点、画面和慢动作片段，优先指出最值得修正的一处动作链断点。"
@@ -1657,6 +1703,17 @@ def render_html(data: dict, analysis_path: Path, outdir: Path) -> str:
       font-size: 14px;
       text-align: right;
     }}
+    .score-note {{
+      width: 100%;
+      margin: 10px 0 0;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(20, 25, 39, .62);
+      color: #aeb9cc;
+      font-size: 13px;
+      line-height: 1.45;
+      text-align: left;
+    }}
     .speed-hero {{
       display: grid;
       grid-template-columns: auto 1fr;
@@ -1837,6 +1894,7 @@ def render_html(data: dict, analysis_path: Path, outdir: Path) -> str:
         <div class="radar-wrap">
           {radar_svg(metrics)}
           <div class="metric-list">{render_metric_bars(metrics)}</div>
+          <p class="score-note">{esc(score_note)}</p>
         </div>
       </div>
     </section>

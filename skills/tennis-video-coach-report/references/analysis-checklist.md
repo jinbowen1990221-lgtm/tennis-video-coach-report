@@ -150,6 +150,28 @@ Each issue should have:
 - "下次口令": one short cue the player can remember.
 - "练习": one drill for 3-5 minutes or 20-30 balls.
 
+## Video-Based Scoring
+
+Assign numeric scores only after reviewing the relevant video frames or clips. Scores are part of the coaching diagnosis, not visual decoration.
+
+Before writing `score`, `action_score`, `ability_radar`, `scoring`, or `swing_speed`, read `references/scoring-rubric.md` and fill the score evidence first:
+
+- For each radar category, cite the timestamp, frame, slow-motion clip, or pose evidence that supports the value.
+- The top score should be computed from the visible movement categories, not chosen independently.
+- If a category is not visible enough, leave it out or mark it unscored with value `0`; do not guess a pleasant-looking number.
+- If the video is far, blurry, or misses contact, reduce confidence and avoid precise-looking scores.
+
+Good scoring evidence:
+
+- "112.25s: shoulders start turning, but the unit turn completes after the ball is already close, so 动力链 is capped at 76."
+- "late clip: follow-through is complete and balanced on several readable swings, so 随挥收拍 can be scored higher than 击球时机."
+
+Bad scoring evidence:
+
+- "整体不错，所以 80."
+- "和示例图差不多."
+- "系统默认值."
+
 Mechanics-heavy reports should also include:
 
 - `stroke_analysis`: phase-by-phase observations tied to frames/clips.

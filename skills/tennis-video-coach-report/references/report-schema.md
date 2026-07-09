@@ -27,6 +27,55 @@ Create `analysis.json` in the run folder, then render it with `scripts/render_te
   "top_review_note": "这一小段最能看出脚步到位、转肩和拍头释放之间的时间差。",
   "top_review_clip": "swing_clips/middle-中段/swing_slow_annotated.mp4",
   "top_review_poster": "swing_clips/middle-中段/freeze_annotated.jpg",
+  "scoring": {
+    "method": "video_evidence_weighted_movement_score",
+    "overall": 80,
+    "summary": "分数基于 12 个可读正手片段、3 个慢动作片段和 4 张关键帧生成。",
+    "items": [
+      {
+        "label": "准备启动",
+        "value": 82,
+        "weight": 0.18,
+        "evidence": ["111.50s：拍面已在身前等待，但第一步启动稍慢。"],
+        "confidence": "medium"
+      },
+      {
+        "label": "动力链",
+        "value": 76,
+        "weight": 0.22,
+        "evidence": ["112.25s：脚步有调整，但转肩完成偏晚，后续更依赖手臂补救。"],
+        "confidence": "medium"
+      },
+      {
+        "label": "击球时机",
+        "value": 81,
+        "weight": 0.20,
+        "evidence": ["112.75s：触球窗口可读，但拍子仍在最后一刻调整。"],
+        "confidence": "medium"
+      },
+      {
+        "label": "挥速释放",
+        "value": 80,
+        "weight": 0.14,
+        "evidence": ["慢动作片段显示随挥能完成，但加速距离被准备时机压缩。"],
+        "confidence": "medium"
+      },
+      {
+        "label": "随挥收拍",
+        "value": 84,
+        "weight": 0.12,
+        "evidence": ["后段片段随挥更完整，身体能跟着拍子过去。"],
+        "confidence": "medium"
+      },
+      {
+        "label": "身体稳定",
+        "value": 79,
+        "weight": 0.14,
+        "evidence": ["低球时能屈膝支撑，但部分回合击球后回位慢半拍。"],
+        "confidence": "medium"
+      }
+    ]
+  },
   "coach_summary": [
     "球已经出来了，但拍子还没到右后方，所以你会感觉自己被球追着打。",
     "随挥比准备动作更好，说明身体已经愿意跟着球拍过去。"
@@ -259,8 +308,13 @@ Create `analysis.json` in the run folder, then render it with `scripts/render_te
 ## Field Notes
 
 - `confidence`: use `high`, `medium`, or `low`.
-- `score`: optional 0-100 top-line report score. If omitted, the renderer derives a conservative score from confidence and kinetic-chain level.
-- `action_score` or `movement_score`: optional 0-100 comprehensive movement score. When present, the renderer can use it as the top-line action evaluation score.
+- `score`: optional 0-100 top-line report score. Use it only when it is backed by video evidence in `scoring`.
+- `action_score` or `movement_score`: optional 0-100 comprehensive movement score. Use it only when it is backed by video evidence in `scoring`.
+- `scoring`: preferred source for all numeric movement scores. Read `scoring-rubric.md` before filling it.
+- `scoring.overall`: comprehensive movement/action score computed from visible video categories, not a generic player rating.
+- `scoring.summary`: explain how many video clips/frames or readable strokes support the scores.
+- `scoring.items[].evidence`: required for every scored metric. Include timestamp/frame/clip evidence; do not use generic observations.
+- `scoring.items[].value`: use `0` only when explicitly unscored due to insufficient evidence. Do not fill default values.
 - `headline`: optional short top-card conclusion. If omitted, the renderer uses `main_focus`.
 - `ntrp`: optional display chip such as `约 NTRP 3.2`.
 - `analysis_confidence`: optional display chip such as `分析置信度 82%`.
@@ -287,10 +341,10 @@ Create `analysis.json` in the run folder, then render it with `scripts/render_te
 - `stroke_analysis[].phases[].assessment`: use `good`, `watch`, `fix`, or `unknown`.
 - `kinetic_chain`: optional body-segment analysis. Use this when there is enough video to reason about feet-to-racket sequence.
 - `kinetic_chain.overall_level` and `kinetic_chain.segments[].level`: use `good`, `watch`, `fix`, or `unknown`.
-- `ability_radar`: optional 3-6 item metric list for the dark mobile report radar. Each item uses `label` and numeric `value` from 0-100. Prefer action-chain labels such as `准备启动`, `动力链`, `击球时机`, `挥速释放`, `随挥收拍`, and `身体稳定`. If omitted, the renderer derives values from `kinetic_chain`.
-- `swing_speed`: optional swing-speed release analysis. Use when there is enough video to judge acceleration rhythm; state uncertainty rather than pretending to know exact racket speed.
-- `swing_speed.score`: optional 0-100 score for visible acceleration and release quality.
-- `swing_speed.items[]`: short rows with `label`, numeric `value`, and `note`, commonly `启动加速`, `峰值释放`, and `减速收拍`.
+- `ability_radar`: optional renderer compatibility list. Prefer mirroring `scoring.items`; do not put values here that differ from evidence-backed `scoring.items`.
+- `swing_speed`: optional swing-speed release analysis. Use only when there is enough video to judge acceleration rhythm; state uncertainty rather than pretending to know exact racket speed.
+- `swing_speed.score`: optional 0-100 score for visible acceleration and release quality. It must be supported by a slow-motion clip, readable full swing, or `scoring.items` evidence.
+- `swing_speed.items[]`: short rows with `label`, numeric `value`, and `note`, commonly `启动加速`, `峰值释放`, and `减速收拍`. Each note should describe what is visible in the video.
 - `evidence_frames`: optional claim-to-frame map. Include at least 2-4 items for mechanics-heavy reports.
 - `confidence_notes`: optional report-level uncertainty bullets. Use this to explain camera limits without weakening evidence-backed claims.
 - `pose_analysis`: optional pose/skeleton review. Use this when key frames have real pose-estimation overlays.

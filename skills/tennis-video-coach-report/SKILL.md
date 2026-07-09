@@ -23,7 +23,19 @@ For each readable stroke, analyze only what the footage supports:
 - **Evidence**: each issue needs a timestamp, frame or slow-motion clip, visible observation, impact, cue, and drill.
 - **Uncertainty**: state when player size, blur, camera angle, occlusion, or missing ball/contact makes a claim low-confidence.
 
-Read `references/biomechanics-checklist.md` before writing detailed action or kinetic-chain claims. Read `references/analysis-checklist.md` before writing coaching copy. Read `references/report-schema.md` before writing `analysis.json`.
+Read `references/biomechanics-checklist.md` before writing detailed action or kinetic-chain claims. Read `references/analysis-checklist.md` before writing coaching copy. Read `references/scoring-rubric.md` before assigning any numeric score. Read `references/report-schema.md` before writing `analysis.json`.
+
+## Video-Based Scoring Standard
+
+Every score in the report must be based on visible action in the user's video:
+
+- The top score is a comprehensive movement/action score, not a decorative report grade.
+- Radar scores must come from readable stroke phases, key frames, slow-motion clips, or pose evidence.
+- Swing-speed score means visible racket-head release quality, not measured ball speed or guessed km/h.
+- If a category is not visible enough, mark it unscored/unknown instead of filling a default number.
+- Store the evidence in `scoring.items[].evidence` and keep the displayed radar values aligned with those scoring items.
+
+Do not use fixed sample values such as 80/78/79 unless the selected video evidence justifies those exact values.
 
 ## Dependencies
 
@@ -117,6 +129,7 @@ Use the active Python if the packages already exist. Do not install globally unl
 8. Write `analysis.json`.
    - Follow `references/report-schema.md`.
    - Read `references/analysis-checklist.md` before writing coaching claims.
+   - Read `references/scoring-rubric.md` before writing `score`, `action_score`, `ability_radar`, `scoring`, or `swing_speed`.
    - Read `references/biomechanics-checklist.md` before writing `stroke_analysis`, `kinetic_chain`, or advanced technique claims.
    - Use plain coaching language. For beginners, choose one primary bottleneck and at most two secondary issues.
    - Include:
@@ -126,6 +139,7 @@ Use the active Python if the packages already exist. Do not install globally unl
      - capture quality
      - optional `stroke_analysis`
      - optional `kinetic_chain`
+     - required evidence-backed `scoring` when any numeric score is displayed
      - optional `evidence_frames`
      - optional `confidence_notes`
      - optional `pose_analysis`
