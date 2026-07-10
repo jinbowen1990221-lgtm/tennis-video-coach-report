@@ -96,6 +96,7 @@ Use the active Python if the packages already exist. Do not install globally unl
      ```
    - Open `rally_review/rally_viewer.html`. The viewer is Chinese-first and supports favorites, playback speed buttons, and individual clip downloads.
    - Every viewer card must put an `动作分析说明` section directly below the video and before playback/download controls. When `rallies[].action_analysis` is available, show its evidence-backed summary and points; otherwise show mode-specific observation guidance and state that it is not a final technical diagnosis.
+   - When the user asks for video diagnosis, inspect every delivered clip and populate `rallies[].action_analysis` with a clip-specific diagnosis, visible evidence, limitation, and cue before delivery. The fallback observation guide is only a temporary review state and must not be presented as the requested diagnosis.
    - Keep the viewer visually aligned with the report: blue page background, white clip cards, centered light-blue section tabs, restrained blue controls, no decorative footer branding, and responsive layouts without horizontal overflow.
    - If segmentation is too strict or too loose, rerun with `--sensitivity` or `--threshold`.
    - Treat automatic rally splits as candidates. Ask the user to confirm or name favorite IDs before compiling.
@@ -246,8 +247,7 @@ Deliver these files when feasible:
 - `selected-rallies.mp4` when favorite rallies are compiled
 - `metadata.json`
 - `frame_index.json`
-- `contact_sheets/*.jpg`
-- `candidate_frames/*.jpg`
+- Keep `contact_sheets/*.jpg` and `candidate_frames/*.jpg` as internal analysis evidence. Do not present or link them as user-facing deliverables unless the user explicitly requests key frames or contact sheets.
 - `generated_assets/*pose*.jpg` when pose is enabled
 - `generated_assets/kinetic_motion/kinetic_chain_overlay.mp4` when dynamic kinetic-chain tracking passes quality checks
 - `generated_assets/kinetic_motion/kinetic_chain_poster.jpg`
@@ -277,7 +277,7 @@ The default report visual style should be a blue mobile-first assessment report 
 - advanced insight cards for playing style, rally organization, and load/risk notes
 - no footer branding or bottom app mark in public share reports
 
-In the final response, link the HTML report, PNG, PDF, and 2-4 representative visual assets using absolute paths.
+In the final response, link the HTML report, PNG, PDF, and requested video/viewer assets using absolute paths. Do not link contact sheets or candidate-frame collections unless the user explicitly asks for them.
 
 ## Boundaries
 
