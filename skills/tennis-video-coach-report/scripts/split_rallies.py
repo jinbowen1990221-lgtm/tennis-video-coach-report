@@ -380,6 +380,56 @@ def viewer_orientation(metadata: dict, rallies: list[dict], outdir: Path) -> str
     return "portrait" if int(metadata.get("height") or 0) > int(metadata.get("width") or 0) else "landscape"
 
 
+def viewer_action_analysis(rally: dict, mode: str) -> tuple[str, str, list[tuple[str, str]]]:
+    explicit = rally.get("action_analysis") or rally.get("analysis")
+    if isinstance(explicit, dict):
+        title = str(explicit.get("title") or "动作分析说明")
+        summary = str(explicit.get("summary") or explicit.get("note") or "")
+        raw_items = explicit.get("items") or explicit.get("points") or []
+        items = []
+        for item in raw_items[:4]:
+            if isinstance(item, dict):
+                label = str(item.get("label") or item.get("title") or "观察点")
+                note = str(item.get("note") or item.get("summary") or item.get("observation") or "")
+                items.append((label, note))
+        if items:
+            return title, summary, items
+
+    defaults = {
+        "shot": (
+            "逐拍动作观察",
+            "这是自动检测的逐拍候选。建议先用 0.5x 慢放按动作顺序复核；以下内容是观察指引，不等同于最终技术诊断。",
+            [
+                ("准备启动", "来球进入前，拍子和肩髋是否已经完成组织。"),
+                ("脚步距离", "触球前最后一步是否到位，身体是否仍在追球。"),
+                ("触球释放", "击球区内是否由腿髋和躯干带动拍头通过。"),
+                ("随挥回位", "收拍是否完整，并立即连接到下一次准备。"),
+            ],
+        ),
+        "practice": (
+            "连续练习动作观察",
+            "该片段保留了同一组练习中的连续动作，用于比较每拍之间的连接和节奏；自动分段本身不代表技术结论。",
+            [
+                ("连续准备", "上一拍结束后，拍面是否及时回到身体前方。"),
+                ("移动节奏", "每拍前是否有调整步，击球时脚下是否稳定。"),
+                ("动力传导", "腿髋、躯干和手臂是否按顺序带动拍头。"),
+                ("回位连接", "随挥结束后是否快速回中并准备下一拍。"),
+            ],
+        ),
+        "rally": (
+            "回合动作观察",
+            "该片段是自动识别的回合候选，适合观察站位、球路选择和连续回位；重要判断仍需结合慢放与关键帧。",
+            [
+                ("启动判断", "对方触球后是否及时分腿垫步并判断方向。"),
+                ("击球距离", "移动后是否为身体和球拍留出稳定空间。"),
+                ("球路组织", "回球方向是否与当前站位和来球压力匹配。"),
+                ("连续回位", "击球后是否恢复到能覆盖下一拍的位置。"),
+            ],
+        ),
+    }
+    return defaults.get(mode, defaults["shot"])
+
+
 def write_viewer(outdir: Path, index_name: str, rallies: list[dict], mode: str, mode_reason: str, source_orientation: str = "landscape") -> Path:
     cards = []
     mode_label = html.escape(MODE_LABELS.get(mode, mode))
@@ -392,27 +442,43 @@ def write_viewer(outdir: Path, index_name: str, rallies: list[dict], mode: str, 
         label = html.escape(rally["label"])
         time_label = html.escape(rally["time_label"])
         duration = html.escape(f"{rally['duration']:.1f}s")
+        analysis_title, analysis_summary, analysis_items = viewer_action_analysis(rally, mode)
+        analysis_points = "".join(
+            f"""
+              <div class="analysis-point">
+                <span>{index}</span>
+                <div><strong>{html.escape(point_title)}</strong><small>{html.escape(point_note)}</small></div>
+              </div>
+            """
+            for index, (point_title, point_note) in enumerate(analysis_items, start=1)
+        )
         card_class = "card portrait" if is_portrait_source else "card"
         cards.append(f"""
         <article class="{card_class}" data-id="{rally['id']}">
           <div class="top">
-            <label class="favorite-label"><input type="checkbox" class="favorite" data-id="{rally['id']}"> ⭐ 收藏</label>
-            <span>⏱ {time_label} · {duration}</span>
+            <label class="favorite-label"><input type="checkbox" class="favorite" data-id="{rally['id']}"> 收藏</label>
+            <span>{time_label} · {duration}</span>
           </div>
           <video controls playsinline preload="metadata" poster="{poster}">
             <source src="{clip}" type="video/mp4">
           </video>
           <div class="body">
             <h2>{label}</h2>
+            <section class="clip-analysis">
+              <h3>动作分析说明</h3>
+              <h4>{html.escape(analysis_title)}</h4>
+              <p>{html.escape(analysis_summary)}</p>
+              <div class="analysis-points">{analysis_points}</div>
+            </section>
             <div class="speeds">
-              <button data-speed="0.5">🐢 0.5x</button>
+              <button data-speed="0.5">0.5x</button>
               <button data-speed="0.75">慢速 0.75x</button>
-              <button data-speed="1">🎾 正常</button>
+              <button data-speed="1">正常 1x</button>
               <button data-speed="1.25">轻快 1.25x</button>
-              <button data-speed="1.5">⚡ 1.5x</button>
+              <button data-speed="1.5">1.5x</button>
               <button data-speed="2">冲刺 2x</button>
             </div>
-            <a class="download" href="{clip}" download>⬇ 下载片段</a>
+            <a class="download" href="{clip}" download>下载片段</a>
           </div>
         </article>
         """)
@@ -427,63 +493,44 @@ def write_viewer(outdir: Path, index_name: str, rallies: list[dict], mode: str, 
   <style>
     * {{ box-sizing: border-box; }}
     :root {{
-      --ink: #18241c;
-      --muted: #6a746c;
-      --green: #13865a;
-      --green-soft: #e8f5eb;
-      --pink: #f37a9d;
-      --pink-soft: #fff0f4;
-      --sun: #f7c948;
-      --paper: #fffdf8;
-      --line: rgba(24, 36, 28, .12);
+      --ink: #26345c;
+      --muted: #66718c;
+      --blue: #4f76ef;
+      --blue-bright: #43b9ff;
+      --blue-soft: #edf5ff;
+      --paper: rgba(255,255,255,.97);
+      --line: #e3ecff;
     }}
+    html, body {{ width: 100%; max-width: 100%; overflow-x: hidden; }}
     body {{
       margin: 0;
-      background: #fff8ef;
+      min-height: 100vh;
+      background: linear-gradient(180deg, #6594f2 0%, #5d8ef0 48%, #5f91ee 100%);
       color: var(--ink);
       font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
     }}
-    main {{ width: min(100%, 1100px); margin: 0 auto; padding: 22px 12px 40px; }}
+    main {{ width: min(100%, 980px); margin: 0 auto; padding: 26px 18px 46px; }}
     header {{
-      position: sticky;
-      top: 0;
-      z-index: 10;
-      margin: -22px -12px 18px;
-      padding: 16px;
-      background: rgba(255, 248, 239, .95);
-      backdrop-filter: blur(12px);
-      border-bottom: 1px solid var(--line);
-    }}
-    .brand {{ display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }}
-    .logo {{
       position: relative;
-      width: 52px;
-      height: 52px;
+      margin: 0 0 18px;
+      padding: 10px 4px 0;
+    }}
+    .brand {{ display: flex; align-items: center; gap: 12px; margin-bottom: 14px; color: #fff; }}
+    .logo {{
+      width: 48px;
+      height: 48px;
       display: inline-grid;
       place-items: center;
-      border: 2px solid rgba(19, 134, 90, .22);
-      border-radius: 50%;
-      background: var(--paper);
-      font-size: 27px;
-      box-shadow: 0 8px 18px rgba(24, 36, 28, .08);
+      border-radius: 10px;
+      background: linear-gradient(135deg, #fff, #dff4ff);
+      color: #4b6fdc;
+      font-size: 15px;
+      font-weight: 950;
+      box-shadow: 0 10px 22px rgba(47, 82, 172, .22);
       flex: 0 0 auto;
     }}
-    .logo::after {{
-      content: "🎾";
-      position: absolute;
-      right: -7px;
-      bottom: -7px;
-      width: 25px;
-      height: 25px;
-      display: grid;
-      place-items: center;
-      border-radius: 50%;
-      background: var(--paper);
-      border: 1px solid rgba(19, 134, 90, .2);
-      font-size: 17px;
-    }}
-    h1 {{ margin: 0; font-size: clamp(27px, 5vw, 38px); line-height: 1.08; letter-spacing: 0; }}
-    .hint {{ margin: 0; color: var(--muted); line-height: 1.55; font-size: 15px; }}
+    h1 {{ margin: 0; font-size: clamp(27px, 5vw, 38px); line-height: 1.08; letter-spacing: 0; color: #fff; }}
+    .hint {{ margin: 5px 0 0; color: rgba(255,255,255,.82); line-height: 1.55; font-size: 15px; }}
     .mode-row {{ display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 0; }}
     .pill {{
       display: inline-flex;
@@ -492,25 +539,26 @@ def write_viewer(outdir: Path, index_name: str, rallies: list[dict], mode: str, 
       min-height: 32px;
       padding: 6px 10px;
       border-radius: 999px;
-      border: 1px solid var(--line);
+      border: 1px solid rgba(255,255,255,.68);
       background: var(--paper);
       color: var(--ink);
       font-size: 13px;
       font-weight: 800;
     }}
-    .pill strong {{ color: var(--green); }}
+    .pill strong {{ color: var(--blue); }}
     .selected {{
       margin-top: 12px;
       display: grid;
       gap: 8px;
       padding: 12px;
-      border-radius: 8px;
+      border-radius: 11px;
       background: var(--paper);
-      border: 1px solid var(--line);
+      border: 1px solid rgba(255,255,255,.72);
+      box-shadow: 0 9px 18px rgba(50, 91, 178, .14);
     }}
-    .selected strong {{ color: var(--green); }}
-    code {{ white-space: pre-wrap; word-break: break-word; color: #465047; font-size: 12px; }}
-    .grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 16px; }}
+    .selected strong {{ color: var(--blue); }}
+    code {{ white-space: pre-wrap; word-break: break-word; color: #596988; font-size: 12px; }}
+    .grid {{ display: grid; grid-template-columns: 1fr; max-width: 900px; margin: 0 auto; gap: 18px; }}
     .grid.portrait-heavy {{
       grid-template-columns: repeat(2, minmax(0, 1fr));
       max-width: 920px;
@@ -519,10 +567,10 @@ def write_viewer(outdir: Path, index_name: str, rallies: list[dict], mode: str, 
     }}
     .card {{
       background: var(--paper);
-      border: 1px solid var(--line);
-      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,.76);
+      border-radius: 11px;
       overflow: hidden;
-      box-shadow: 0 12px 28px rgba(24, 36, 28, .08);
+      box-shadow: 0 12px 28px rgba(47, 82, 172, .18);
     }}
     .top {{
       display: flex;
@@ -533,9 +581,9 @@ def write_viewer(outdir: Path, index_name: str, rallies: list[dict], mode: str, 
       font-size: 13px;
       color: var(--muted);
     }}
-    .favorite-label {{ color: var(--green); font-weight: 900; white-space: nowrap; }}
-    input[type="checkbox"] {{ accent-color: var(--pink); }}
-    video {{ display: block; width: 100%; background: #dfe6dc; aspect-ratio: 16 / 9; object-fit: contain; }}
+    .favorite-label {{ color: var(--blue); font-weight: 900; white-space: nowrap; }}
+    input[type="checkbox"] {{ accent-color: var(--blue); }}
+    video {{ display: block; width: 100%; background: #edf4ff; aspect-ratio: 16 / 9; object-fit: contain; }}
     .card.portrait video {{
       aspect-ratio: 9 / 16;
       max-height: min(78vh, 760px);
@@ -553,41 +601,117 @@ def write_viewer(outdir: Path, index_name: str, rallies: list[dict], mode: str, 
       padding: 7px 9px;
       font-size: 12px;
     }}
+    .card.portrait .analysis-points {{ grid-template-columns: repeat(2, minmax(0, 1fr)); }}
+    .card.portrait .analysis-point + .analysis-point {{ border-left: 0; }}
+    .card.portrait .analysis-point:nth-child(even) {{ border-left: 1px solid var(--line); }}
+    .card.portrait .analysis-point:nth-child(n+3) {{ border-top: 1px solid var(--line); }}
     .body {{ padding: 14px; }}
     h2 {{ margin: 0 0 10px; font-size: 20px; line-height: 1.2; letter-spacing: 0; }}
+    .clip-analysis {{
+      margin: 0 0 14px;
+      padding: 0 14px 14px;
+      background: #f4f8ff;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+    }}
+    .clip-analysis h3 {{
+      width: min(230px, calc(100% - 24px));
+      min-height: 42px;
+      display: grid;
+      place-items: center;
+      margin: 0 auto 12px;
+      padding: 7px 14px;
+      border-radius: 0 0 16px 16px;
+      background: linear-gradient(180deg, #eefaff, #d9f3ff);
+      color: #496cae;
+      font-size: 17px;
+      line-height: 1.25;
+      text-align: center;
+    }}
+    .clip-analysis > p {{
+      margin: 0 0 12px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+      text-align: center;
+    }}
+    .clip-analysis h4 {{
+      margin: 0 0 6px;
+      color: #344265;
+      font-size: 14px;
+      line-height: 1.35;
+      text-align: center;
+    }}
+    .analysis-points {{
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      border-top: 1px solid var(--line);
+    }}
+    .analysis-point {{
+      min-width: 0;
+      display: grid;
+      grid-template-columns: 24px minmax(0, 1fr);
+      gap: 8px;
+      align-items: start;
+      padding: 12px 10px 2px;
+    }}
+    .analysis-point + .analysis-point {{ border-left: 1px solid var(--line); }}
+    .analysis-point > span {{
+      width: 24px;
+      height: 24px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--blue), var(--blue-bright));
+      color: #fff;
+      font-size: 11px;
+      font-weight: 950;
+    }}
+    .analysis-point strong {{
+      display: block;
+      margin-bottom: 4px;
+      color: #344265;
+      font-size: 13px;
+      line-height: 1.3;
+    }}
+    .analysis-point small {{
+      display: block;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.45;
+      overflow-wrap: anywhere;
+    }}
     .speeds {{ display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }}
     button, .download {{
-      border: 1px solid rgba(19, 134, 90, .16);
+      border: 1px solid #dbe8ff;
       border-radius: 999px;
       padding: 8px 11px;
-      background: var(--green-soft);
-      color: var(--green);
+      background: var(--blue-soft);
+      color: #496cae;
       font-weight: 800;
       text-decoration: none;
       cursor: pointer;
       font-size: 13px;
     }}
-    button:hover, .download:hover {{ background: var(--pink-soft); color: #ba365d; border-color: rgba(243, 122, 157, .28); }}
+    button:hover, .download:hover {{ background: #dff2ff; color: #315fd0; border-color: #bfdcff; }}
     .download {{ display: inline-flex; }}
     .empty {{
       grid-column: 1 / -1;
       margin: 0;
       padding: 24px;
-      border: 1px dashed rgba(19, 134, 90, .35);
+      border: 1px dashed rgba(79, 118, 239, .38);
       border-radius: 8px;
       background: var(--paper);
       color: var(--muted);
       text-align: center;
     }}
-    footer {{
-      padding: 28px 0 4px;
-      text-align: center;
-      color: var(--muted);
-      font-size: 14px;
-    }}
+    footer {{ display: none; }}
     @media (max-width: 520px) {{
-      main {{ padding-left: 8px; padding-right: 8px; }}
-      header {{ margin-left: -8px; margin-right: -8px; padding-left: 12px; padding-right: 12px; }}
+      main {{ padding: 18px 10px 32px; }}
+      header {{ margin: 0 0 14px; padding: 6px 2px 0; }}
+      .logo {{ width: 42px; height: 42px; border-radius: 9px; }}
+      h1 {{ font-size: 27px; }}
+      .hint {{ font-size: 13px; }}
       .grid {{ grid-template-columns: 1fr; gap: 14px; }}
       .grid.portrait-heavy {{ grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }}
       .card.portrait video {{ max-height: 76vh; }}
@@ -597,6 +721,17 @@ def write_viewer(outdir: Path, index_name: str, rallies: list[dict], mode: str, 
       .card.portrait h2 {{ font-size: 16px; margin-bottom: 8px; }}
       .card.portrait .speeds {{ gap: 5px; margin-bottom: 8px; }}
       .card.portrait button, .card.portrait .download {{ padding: 6px 7px; font-size: 11px; }}
+      .clip-analysis {{ padding: 0 10px 10px; }}
+      .clip-analysis h3 {{ min-height: 38px; margin-bottom: 10px; font-size: 15px; }}
+      .clip-analysis > p {{ font-size: 12px; }}
+      .analysis-points {{ grid-template-columns: repeat(2, minmax(0, 1fr)); }}
+      .analysis-point + .analysis-point {{ border-left: 0; }}
+      .analysis-point:nth-child(even) {{ border-left: 1px solid var(--line); }}
+      .analysis-point:nth-child(n+3) {{ border-top: 1px solid var(--line); }}
+      .analysis-point {{ grid-template-columns: 22px minmax(0, 1fr); padding: 10px 7px 4px; }}
+      .analysis-point > span {{ width: 22px; height: 22px; }}
+      .analysis-point strong {{ font-size: 12px; }}
+      .analysis-point small {{ font-size: 10px; }}
     }}
   </style>
 </head>
@@ -604,16 +739,16 @@ def write_viewer(outdir: Path, index_name: str, rallies: list[dict], mode: str, 
   <main>
     <header>
       <div class="brand">
-        <span class="logo" aria-hidden="true">👩🏻‍🦰</span>
+        <span class="logo" aria-hidden="true">AI</span>
         <div>
           <h1>网球片段浏览器</h1>
           <p class="hint">查看系统自动拆出的候选片段，支持慢放、加速、收藏、下载，也可以把喜欢的片段合成一条精选视频。</p>
         </div>
       </div>
       <div class="mode-row">
-        <span class="pill">🎬 当前模式：<strong>{mode_label}</strong></span>
-        <span class="pill">🧠 判断依据：{escaped_reason}</span>
-        <span class="pill">🎾 片段数：<strong>{len(rallies)}</strong></span>
+        <span class="pill">当前模式：<strong>{mode_label}</strong></span>
+        <span class="pill">判断依据：{escaped_reason}</span>
+        <span class="pill">片段数：<strong>{len(rallies)}</strong></span>
       </div>
       <div class="selected">
         <strong>已收藏片段：<span id="selected">还没有收藏</span></strong>

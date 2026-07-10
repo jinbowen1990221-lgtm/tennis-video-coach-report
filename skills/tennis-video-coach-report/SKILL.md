@@ -95,6 +95,8 @@ Use the active Python if the packages already exist. Do not install globally unl
      python3 <skill-root>/scripts/split_rallies.py <video> --outdir <run-folder>/rally_review --crop 0.05,0.20,0.95,0.95
      ```
    - Open `rally_review/rally_viewer.html`. The viewer is Chinese-first and supports favorites, playback speed buttons, and individual clip downloads.
+   - Every viewer card must put an `动作分析说明` section directly below the video and before playback/download controls. When `rallies[].action_analysis` is available, show its evidence-backed summary and points; otherwise show mode-specific observation guidance and state that it is not a final technical diagnosis.
+   - Keep the viewer visually aligned with the report: blue page background, white clip cards, centered light-blue section tabs, restrained blue controls, no decorative footer branding, and responsive layouts without horizontal overflow.
    - If segmentation is too strict or too loose, rerun with `--sensitivity` or `--threshold`.
    - Treat automatic rally splits as candidates. Ask the user to confirm or name favorite IDs before compiling.
 
