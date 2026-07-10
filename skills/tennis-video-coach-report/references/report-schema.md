@@ -27,6 +27,20 @@ Create `analysis.json` in the run folder, then render it with `scripts/render_te
   "top_review_note": "这一小段最能看出脚步到位、转肩和拍头释放之间的时间差。",
   "top_review_clip": "swing_clips/middle-中段/swing_normal.mp4",
   "top_review_poster": "swing_clips/middle-中段/freeze_annotated.jpg",
+  "action_video_analysis": [
+    {
+      "value": "4",
+      "unit": "个练习片段",
+      "title": "连续练习节奏分段",
+      "summary": "说明这些片段如何用于比较准备、移动、击球和回位节奏。"
+    },
+    {
+      "value": "11",
+      "unit": "个逐拍候选",
+      "title": "球员区域逐拍复核",
+      "summary": "说明逐拍候选如何筛选，以及哪些片段最终进入评分和动力链结论。"
+    }
+  ],
   "scoring": {
     "method": "video_evidence_weighted_movement_score",
     "overall": 80,
@@ -333,6 +347,9 @@ Create `analysis.json` in the run folder, then render it with `scripts/render_te
 - `top_review_poster`: optional frame shown behind/inside the top review video card.
 - `top_review_title`: optional label for the top review card, such as `动力链断点片段`.
 - `top_review_note`: optional one-sentence explanation of what to watch in the top clip.
+- `action_video_analysis`: optional structured explanations rendered directly below the top review video. Use it when practice or shot segmentation produced clip counts; explain what each candidate group means and how it supports the report.
+- `action_video_analysis[].value` and `unit`: compact evidence count, such as `4` plus `个练习片段`.
+- `action_video_analysis[].title` and `summary`: state how candidates were reviewed and which samples entered the final diagnosis instead of showing isolated links or numbers.
 - `highlights`: 1-3 items.
 - `issues`: 1-3 items, but prefer one main issue for beginners.
 - `phase_review`: optional but required when the user asks for early/middle/late comparison or slow-motion clips.

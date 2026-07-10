@@ -1134,9 +1134,9 @@ def icon_svg(name: str) -> str:
 
 
 def radar_svg(metrics: list[tuple[str, int]]) -> str:
-    size = 280
+    size = 320
     cx = cy = size / 2
-    radius = 92
+    radius = 90
     count = len(metrics)
     if count < 3:
         return ""
@@ -1532,6 +1532,42 @@ def render_swing_speed(data: dict) -> str:
     """
 
 
+def render_action_video_analysis(data: dict) -> str:
+    items = data.get("action_video_analysis") or data.get("clip_analysis") or []
+    if not isinstance(items, list) or not items:
+        return ""
+    cards = []
+    for item in items[:4]:
+        if not isinstance(item, dict):
+            continue
+        value = str(item.get("value") or item.get("count") or "")
+        unit = str(item.get("unit") or "")
+        title = str(item.get("title") or item.get("label") or "动作样本")
+        summary = str(item.get("summary") or item.get("note") or item.get("description") or "")
+        if not (value or title or summary):
+            continue
+        metric = f"{esc(value)}<small>{esc(unit)}</small>" if value else icon_svg("target")
+        cards.append(
+            f"""
+              <article class="action-analysis-card">
+                <span class="action-analysis-metric">{metric}</span>
+                <div>
+                  <strong>{esc(title)}</strong>
+                  <p>{esc(summary)}</p>
+                </div>
+              </article>
+            """
+        )
+    if not cards:
+        return ""
+    return f"""
+      <div class="action-analysis">
+        <h3>视频动作分析说明</h3>
+        <div class="action-analysis-grid">{''.join(cards)}</div>
+      </div>
+    """
+
+
 def render_html(data: dict, analysis_path: Path, outdir: Path) -> str:
     analysis_dir = analysis_path.parent
     asset_dir = outdir / "assets"
@@ -1555,6 +1591,7 @@ def render_html(data: dict, analysis_path: Path, outdir: Path) -> str:
         [data.get("top_review_note"), review_phase.get("issue"), review_phase.get("change")],
         "截取最能体现动作链断点的一小段，叠加脚步、转体、手臂释放和拍头加速的动力链标注。",
     )
+    action_video_analysis = render_action_video_analysis(data)
     score_note = scoring_note(data)
     main_body = " ".join(str(s) for s in summaries[1:3]) or str(data.get("one_liner") or "")
     if not main_body:
@@ -1574,10 +1611,18 @@ def render_html(data: dict, analysis_path: Path, outdir: Path) -> str:
   <title>{esc(data.get("title", "AI 综合分析报告"))}</title>
   <style>
     * {{ box-sizing: border-box; }}
-    html {{ scrollbar-width: none; }}
+    html {{
+      width: 100%;
+      max-width: 100%;
+      overflow-x: hidden;
+      scrollbar-width: none;
+    }}
     html::-webkit-scrollbar, body::-webkit-scrollbar {{ width: 0; height: 0; }}
     body {{
       margin: 0;
+      width: 100%;
+      max-width: 100%;
+      overflow-x: hidden;
       min-height: 100vh;
       background: #0c101c;
       color: #eef3ff;
@@ -1585,6 +1630,8 @@ def render_html(data: dict, analysis_path: Path, outdir: Path) -> str:
     }}
     .page {{
       width: min(100%, 900px);
+      max-width: 100%;
+      min-width: 0;
       margin: 0 auto;
       padding: 64px 26px 44px;
       background:
@@ -1593,6 +1640,9 @@ def render_html(data: dict, analysis_path: Path, outdir: Path) -> str:
     }}
     .panel {{
       position: relative;
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
       overflow: hidden;
       border-radius: 20px;
       background: linear-gradient(180deg, rgba(39,44,61,.96), rgba(32,37,54,.96));
@@ -2047,11 +2097,14 @@ def render_html(data: dict, analysis_path: Path, outdir: Path) -> str:
     }}
     .radar-wrap {{
       display: grid;
+      width: 100%;
+      min-width: 0;
       justify-items: center;
       gap: 10px;
     }}
     .radar {{
-      width: min(100%, 430px);
+      width: min(100%, 400px);
+      max-width: 100%;
       height: auto;
       margin: 0 auto 6px;
     }}
@@ -2062,6 +2115,7 @@ def render_html(data: dict, analysis_path: Path, outdir: Path) -> str:
     }}
     .metric-list {{
       width: 100%;
+      min-width: 0;
       display: grid;
       gap: 10px;
       margin-top: 6px;
@@ -2225,7 +2279,7 @@ def render_html(data: dict, analysis_path: Path, outdir: Path) -> str:
     .report-header::before {{
       content: "";
       position: absolute;
-      inset: -42px -20px auto;
+      inset: -42px 0 auto;
       height: 170px;
       background:
         radial-gradient(circle at 17% 42%, rgba(255,255,255,.24) 0 2px, transparent 3px),
@@ -2432,6 +2486,70 @@ def render_html(data: dict, analysis_path: Path, outdir: Path) -> str:
       border: 1px solid #e7efff;
       font-size: 14px;
     }}
+    .action-analysis {{
+      width: 100%;
+      margin: 14px 0 0;
+    }}
+    .action-analysis > h3 {{
+      margin: 0 0 10px;
+      color: #334166;
+      font-size: 15px;
+      line-height: 1.35;
+      text-align: center;
+    }}
+    .action-analysis-grid {{
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }}
+    .action-analysis-card {{
+      min-width: 0;
+      display: grid;
+      grid-template-columns: 62px minmax(0, 1fr);
+      gap: 12px;
+      align-items: center;
+      padding: 13px;
+      border-radius: 9px;
+      background: #f4f8ff;
+      border: 1px solid #e4edff;
+      text-align: left;
+    }}
+    .action-analysis-metric {{
+      width: 62px;
+      min-height: 54px;
+      display: grid;
+      place-items: center;
+      align-content: center;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #6688ff, #43b9ff);
+      color: #fff;
+      font-size: 23px;
+      line-height: 1;
+      font-weight: 950;
+    }}
+    .action-analysis-metric small {{
+      display: block;
+      margin-top: 4px;
+      color: rgba(255,255,255,.88);
+      font-size: 9px;
+      line-height: 1.15;
+      font-weight: 850;
+      text-align: center;
+    }}
+    .action-analysis-card strong {{
+      display: block;
+      margin-bottom: 4px;
+      color: #344265;
+      font-size: 14px;
+      line-height: 1.35;
+    }}
+    .action-analysis-card p {{
+      margin: 0;
+      color: #66718c;
+      font-size: 11px;
+      line-height: 1.5;
+      overflow-wrap: anywhere;
+    }}
     .chain-overlay {{
       width: 100%;
       grid-template-columns: repeat(4, 1fr);
@@ -2563,6 +2681,12 @@ def render_html(data: dict, analysis_path: Path, outdir: Path) -> str:
       .review-shell img, .review-shell video {{ border-radius: 10px; }}
       .replay-label {{ left: 58px; top: 20px; font-size: 11px; }}
       .review-note {{ font-size: 12px; padding: 9px 11px; }}
+      .action-analysis {{ width: 84%; margin-left: auto; margin-right: auto; }}
+      .action-analysis-grid {{ grid-template-columns: 1fr; gap: 8px; }}
+      .action-analysis-card {{ grid-template-columns: 56px minmax(0, 1fr); padding: 11px; }}
+      .action-analysis-metric {{ width: 56px; min-height: 50px; font-size: 21px; }}
+      .action-analysis-card strong {{ font-size: 13px; }}
+      .action-analysis-card p {{ font-size: 11px; }}
       .chain-overlay {{ grid-template-columns: repeat(2, 1fr); gap: 7px; }}
       .chain-step {{ min-height: 70px; padding: 9px; }}
       .chain-step span {{ font-size: 12px; }}
@@ -2685,6 +2809,7 @@ def render_html(data: dict, analysis_path: Path, outdir: Path) -> str:
       <div class="replay-bg"></div>
       <div class="replay-label">{esc(review_title)}</div>
       <div class="review-shell">{review_media_html}</div>
+      {action_video_analysis}
       <div class="review-note">{esc(review_issue)}</div>
       <div class="chain-overlay">{render_chain_steps(data)}</div>
     </section>
@@ -2705,18 +2830,39 @@ def export_with_playwright(html_path: Path, outdir: Path, do_pdf: bool, do_png: 
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
-        if do_pdf:
-            page = browser.new_page(viewport={"width": 860, "height": 1200}, device_scale_factor=1)
-            page.goto(html_path.as_uri(), wait_until="networkidle")
-            pdf_path = outdir / "tennis-report.pdf"
-            page.pdf(path=str(pdf_path), format="A4", print_background=True, margin={"top": "0", "right": "0", "bottom": "0", "left": "0"})
-            exported.append(str(pdf_path))
+        page = browser.new_page(viewport={"width": 540, "height": 1080}, device_scale_factor=2)
+        page.goto(html_path.as_uri(), wait_until="networkidle")
+        page.emulate_media(media="screen")
+        page.wait_for_timeout(500)
+        measure_script = """() => ({
+            width: Math.ceil(document.documentElement.scrollWidth),
+            height: Math.ceil(document.documentElement.scrollHeight),
+            viewportWidth: Math.ceil(document.documentElement.clientWidth)
+        })"""
+        dimensions = page.evaluate(measure_script)
+        # Expand the capture canvas when a future report module is wider than the
+        # mobile baseline. This favors a slightly wider export over clipped copy.
+        for _ in range(2):
+            if dimensions["width"] <= dimensions["viewportWidth"]:
+                break
+            page.set_viewport_size({"width": dimensions["width"], "height": 1080})
+            page.wait_for_timeout(150)
+            dimensions = page.evaluate(measure_script)
         if do_png:
-            page = browser.new_page(viewport={"width": 430, "height": 932}, device_scale_factor=2)
-            page.goto(html_path.as_uri(), wait_until="networkidle")
             png_path = outdir / "tennis-report-mobile.png"
             page.screenshot(path=str(png_path), full_page=True)
             exported.append(str(png_path))
+        if do_pdf:
+            pdf_path = outdir / "tennis-report.pdf"
+            page.pdf(
+                path=str(pdf_path),
+                width=f"{dimensions['width']}px",
+                height=f"{dimensions['height']}px",
+                print_background=True,
+                margin={"top": "0", "right": "0", "bottom": "0", "left": "0"},
+            )
+            exported.append(str(pdf_path))
+        page.close()
         browser.close()
     return exported
 

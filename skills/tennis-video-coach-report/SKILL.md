@@ -156,6 +156,7 @@ Use the active Python if the packages already exist. Do not install globally unl
      - capture quality
      - optional `stroke_analysis`
      - optional `kinetic_chain`
+     - optional `action_video_analysis` when practice and shot segmentation counts should be explained below the review video
      - required evidence-backed `scoring` when any numeric score is displayed
      - optional `evidence_frames`
      - optional `confidence_notes`
@@ -201,6 +202,7 @@ State uncertainty when the player is small, blurred, occluded, or partly outside
 - Update marker positions frame by frame. Highlight the active transfer segment from feet and knees through hips, trunk, arm, and wrist/racket-side release using actual landmark motion.
 - Require a usable detection/tracking ratio before publishing the dynamic overlay. If coverage is below the threshold, omit the animated skeleton and show the original key frame with an explicit evidence note.
 - Keep video text minimal. Put coaching conclusions and caveats below the video in report copy.
+- When practice-mode and shot-mode segmentation are both generated, put their counts and meanings in `action_video_analysis` below the review video. Explain how the candidate groups were used; do not leave them as standalone links or unexplained statistics.
 - Do not call a 2D overlay force, torque, joint load, exact racket speed, or precise 3D rotation measurement.
 - For manual optical-flow fallback, disclose that the points were calibrated on a key frame and tracked in 2D.
 
@@ -264,6 +266,7 @@ The default report visual style should be a blue mobile-first assessment report 
 - score copy should read as a comprehensive movement/action evaluation, with kinetic-chain quality as a first-class criterion
 - targeted review video or frame card clipped around the most representative problem moment
 - review video should prefer a clean clip without burned-in explanatory text; put the segment summary below the video as report copy
+- HTML is the source report. Measure its rendered width and height before export; PNG must capture the full page, automatically expand the canvas when horizontal overflow is detected, and PDF must use the same screen-media dimensions so sections are not clipped or split across arbitrary A4 pages.
 - kinetic-chain labels on the top review card, covering footwork, hip/trunk transfer, arm release, and racket-head acceleration when visible
 - icon-led diagnosis focus cards for highlight, improvement, and next step; use the bundled `assets/icons/*.svg` card icons when available, and force all icons inside colored circles to render in white
 - ability radar and metric bars, including swing-speed release when evidence supports it
