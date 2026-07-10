@@ -7,6 +7,8 @@ This optimized version adds deeper technique coaching:
 - stroke type identification for forehand, backhand, serve, volley, overhead, or unknown strokes
 - phase-by-phase action breakdown: ready/split, unit turn, footwork/spacing, loading, forward swing, contact window, follow-through, recovery
 - kinetic-chain analysis from feet and spacing through legs, hips, trunk, arm, racket path, finish, and recovery
+- body-locked kinetic-chain motion clips whose joint markers and transfer highlights follow the player frame by frame
+- evidence-weighted ability radar and overall movement score, recalculated from the same six video-based action metrics
 - evidence-backed diagnosis with timestamps, frames, clips, visible observations, confidence notes, cues, and drills
 - optional pose/skeleton overlays when the player is visible enough for MediaPipe-based support
 
@@ -45,8 +47,10 @@ skills/tennis-video-coach-report/
 └── scripts/
     ├── compile_rallies.py
     ├── extract_tennis_frames.py
+    ├── extract_pose_macos.swift
     ├── make_swing_clips.py
     ├── pose_overlay.py
+    ├── pose_video_overlay.py
     ├── render_tennis_report.py
     └── split_rallies.py
 ```
@@ -62,6 +66,8 @@ Typical output artifacts include:
 - `contact_sheets/*.jpg`
 - `candidate_frames/*.jpg`
 - `swing_clips/*/swing_slow_annotated.mp4`
+- `generated_assets/kinetic_motion/kinetic_chain_overlay.mp4`
+- `generated_assets/kinetic_motion/kinetic_chain_poster.jpg`
 - `analysis.json`
 - `report/index.html`
 - `report/tennis-report-mobile.png`

@@ -162,6 +162,16 @@ Create `analysis.json` in the run folder, then render it with `scripts/render_te
       }
     ]
   },
+  "kinetic_motion": {
+    "clip": "generated_assets/kinetic_motion/kinetic_chain_overlay.mp4",
+    "poster": "generated_assets/kinetic_motion/kinetic_chain_poster.jpg",
+    "backend": "mediapipe",
+    "tracked_ratio": 0.93,
+    "note": "关节点随身体逐帧移动，黄色高亮表示当前更活跃的传导段。",
+    "limitations": [
+      "二维单机位姿态跟踪不代表精确三维角度或受力测量。"
+    ]
+  },
   "ability_radar": [
     {"label": "准备启动", "value": 82},
     {"label": "动力链", "value": 76},
@@ -341,6 +351,12 @@ Create `analysis.json` in the run folder, then render it with `scripts/render_te
 - `stroke_analysis[].phases[].assessment`: use `good`, `watch`, `fix`, or `unknown`.
 - `kinetic_chain`: optional body-segment analysis. Use this when there is enough video to reason about feet-to-racket sequence.
 - `kinetic_chain.overall_level` and `kinetic_chain.segments[].level`: use `good`, `watch`, `fix`, or `unknown`.
+- `kinetic_motion`: optional body-locked overlay video. Include it only when automatic pose detection or calibrated 2D tracking passes the configured frame-coverage threshold.
+- `kinetic_motion.clip`: clean MP4 with markers and transfer highlights following the player's body frame by frame.
+- `kinetic_motion.poster`: representative overlay frame used for static PNG/PDF export.
+- `kinetic_motion.backend`: use `mediapipe`, `apple_vision`, or `manual_seed_optical_flow`. Do not label manual optical flow as AI pose estimation.
+- `kinetic_motion.tracked_ratio`: fraction of output frames with usable body points. Omit the animation when this is below the configured quality threshold.
+- `kinetic_motion.note` and `kinetic_motion.limitations`: explain what the overlay shows and its 2D/camera limits.
 - `ability_radar`: optional renderer compatibility list. Prefer mirroring `scoring.items`; do not put values here that differ from evidence-backed `scoring.items`.
 - `swing_speed`: optional swing-speed release analysis. Use only when there is enough video to judge acceleration rhythm; state uncertainty rather than pretending to know exact racket speed.
 - `swing_speed.score`: optional 0-100 score for visible acceleration and release quality. It must be supported by a slow-motion clip, readable full swing, or `scoring.items` evidence.

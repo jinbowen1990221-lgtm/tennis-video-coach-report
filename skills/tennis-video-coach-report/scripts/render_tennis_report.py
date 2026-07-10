@@ -402,6 +402,8 @@ def render_html(data: dict, analysis_path: Path, outdir: Path) -> str:
   <title>{esc(data.get("title", "网球训练报告"))}</title>
   <style>
     * {{ box-sizing: border-box; }}
+    html {{ scrollbar-width: none; }}
+    html::-webkit-scrollbar, body::-webkit-scrollbar {{ width: 0; height: 0; }}
     body {{
       margin: 0;
       background: #f4f1e8;
@@ -973,9 +975,31 @@ def scoring_items(data: dict) -> list[dict]:
     return []
 
 
+def weighted_score(items: list[dict]) -> int | None:
+    scored = []
+    for item in items:
+        value = score_value(item.get("value") if item.get("value") is not None else item.get("score"))
+        if value is None or value <= 0:
+            continue
+        try:
+            weight = float(item.get("weight", 1.0))
+        except (TypeError, ValueError):
+            weight = 1.0
+        if weight <= 0:
+            continue
+        scored.append((value, weight))
+    if not scored:
+        return None
+    total_weight = sum(weight for _, weight in scored)
+    return int(round(sum(value * weight for value, weight in scored) / total_weight))
+
+
 def report_score(data: dict) -> int:
     scoring = data.get("scoring") or data.get("movement_scoring") or {}
     if isinstance(scoring, dict):
+        computed = weighted_score(scoring_items(data))
+        if computed is not None:
+            return computed
         explicit = score_value(scoring.get("overall") or scoring.get("score") or scoring.get("action_score"))
         if explicit is not None:
             return explicit
@@ -1292,6 +1316,24 @@ def kinetic_lab_frame(data: dict) -> str:
     )
 
 
+def kinetic_motion_model(data: dict) -> dict:
+    motion = data.get("kinetic_motion") or data.get("kinetic_chain_motion")
+    if isinstance(motion, dict):
+        return motion
+    for item in data.get("pose_analysis") or []:
+        if not isinstance(item, dict):
+            continue
+        clip = item.get("overlay_clip") or item.get("overlay_video") or item.get("video")
+        if clip:
+            return {
+                "clip": clip,
+                "poster": item.get("overlay_frame") or item.get("poster"),
+                "backend": item.get("backend") or "pose_estimation",
+                "note": item.get("note"),
+            }
+    return {}
+
+
 def kinetic_lab_stats(data: dict) -> list[tuple[str, str, int]]:
     metrics = dict(report_metrics(data))
     speed = swing_speed_model(data)
@@ -1308,7 +1350,17 @@ def kinetic_lab_stats(data: dict) -> list[tuple[str, str, int]]:
 
 
 def render_kinetic_lab(data: dict, analysis_dir: Path, asset_dir: Path) -> str:
-    frame = rel_asset(kinetic_lab_frame(data), analysis_dir, asset_dir)
+    motion = kinetic_motion_model(data)
+    motion_clip = rel_media(
+        motion.get("clip") or motion.get("video") or motion.get("overlay_clip"),
+        analysis_dir,
+        asset_dir,
+    )
+    frame = rel_asset(
+        motion.get("poster") or motion.get("overlay_frame") or kinetic_lab_frame(data),
+        analysis_dir,
+        asset_dir,
+    )
     chain = data.get("kinetic_chain") or {}
     phases = data.get("phase_review") or data.get("phase_reviews") or []
     phase = selected_issue_phase(data)
@@ -1353,7 +1405,25 @@ def render_kinetic_lab(data: dict, analysis_dir: Path, asset_dir: Path) -> str:
             <figcaption>关键帧</figcaption>
           </figure>
         """)
-    media = image_tag(frame, "动力链关键帧") if frame else '<div class="kinetic-empty">暂无关键帧</div>'
+    if motion_clip:
+        poster_attr = f' poster="{esc(frame)}"' if frame else ""
+        media = (
+            f'<video class="kinetic-motion-video" controls playsinline autoplay muted loop preload="metadata"{poster_attr}>'
+            f'<source src="{esc(motion_clip)}" type="video/mp4"></video>'
+        )
+        badge = "逐帧姿态跟踪"
+    else:
+        media = image_tag(frame, "动力链关键帧") if frame else '<div class="kinetic-empty">暂无可用姿态证据</div>'
+        badge = "关键帧证据"
+    backend = str(motion.get("backend") or motion.get("evidence_level") or "")
+    tracking_note = first_text(
+        [
+            motion.get("note"),
+            "关节点随片段中的身体变化逐帧移动；黄色高亮表示当前动作中更活跃的传导段。" if motion_clip else "当前没有通过质量阈值的逐帧姿态结果，因此不显示固定骨架示意。",
+        ]
+    )
+    if backend in {"manual_seed_optical_flow", "manual_seed_tracking"}:
+        tracking_note += " 本片段采用关键帧校准后的二维跟踪，仅用于观察动作顺序，不代表精确三维角度或受力测量。"
     return f"""
       <section class="panel">
         <div class="section-body">
@@ -1361,24 +1431,12 @@ def render_kinetic_lab(data: dict, analysis_dir: Path, asset_dir: Path) -> str:
           <div class="kinetic-lab">
             <div class="kinetic-visual">
               {media}
-              <svg class="body-map" viewBox="0 0 100 100" aria-hidden="true">
-                <path class="energy-line" d="M23 79 C36 72 45 63 49 50 C53 39 60 31 72 22"/>
-                <path class="ground-arrow" d="M23 84 C38 92 56 89 72 79"/>
-                <circle cx="50" cy="22" r="4"/>
-                <circle cx="43" cy="36" r="3.5"/>
-                <circle cx="59" cy="36" r="3.5"/>
-                <circle cx="50" cy="49" r="4"/>
-                <circle cx="40" cy="61" r="3.5"/>
-                <circle cx="61" cy="62" r="3.5"/>
-                <circle cx="31" cy="80" r="3.5"/>
-                <circle cx="72" cy="80" r="3.5"/>
-                <path d="M50 26 L50 49 M43 36 L50 49 L59 36 M50 49 L40 61 L31 80 M50 49 L61 62 L72 80"/>
-              </svg>
-              <div class="lab-badge">AI 动作链</div>
+              <div class="lab-badge">{esc(badge)}</div>
             </div>
             <aside class="kinetic-data">
               <h3>动作分析</h3>
               <p>{esc(summary)}</p>
+              <p class="tracking-note">{esc(tracking_note)}</p>
               <div class="lab-stats">{stats}</div>
             </aside>
           </div>
@@ -1516,6 +1574,8 @@ def render_html(data: dict, analysis_path: Path, outdir: Path) -> str:
   <title>{esc(data.get("title", "AI 综合分析报告"))}</title>
   <style>
     * {{ box-sizing: border-box; }}
+    html {{ scrollbar-width: none; }}
+    html::-webkit-scrollbar, body::-webkit-scrollbar {{ width: 0; height: 0; }}
     body {{
       margin: 0;
       min-height: 100vh;
@@ -1738,13 +1798,18 @@ def render_html(data: dict, analysis_path: Path, outdir: Path) -> str:
       border: 1px solid rgba(177, 211, 255, .22);
       box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 16px 34px rgba(0,0,0,.22);
     }}
-    .kinetic-visual > img {{
+    .kinetic-visual > img,
+    .kinetic-visual > video {{
       width: 100%;
       height: 100%;
       min-height: 280px;
       display: block;
       object-fit: cover;
       filter: saturate(1.06) contrast(1.02) brightness(.84);
+    }}
+    .kinetic-visual > video {{
+      aspect-ratio: 9 / 10;
+      background: #111a2c;
     }}
     .kinetic-visual::after {{
       content: "";
@@ -1754,36 +1819,6 @@ def render_html(data: dict, analysis_path: Path, outdir: Path) -> str:
       border-radius: 16px;
       background: linear-gradient(135deg, rgba(255,255,255,.12), rgba(255,255,255,.02));
       pointer-events: none;
-    }}
-    .body-map {{
-      position: absolute;
-      inset: 9% 11% 8% 13%;
-      width: 76%;
-      height: 83%;
-      overflow: visible;
-      filter: drop-shadow(0 0 10px rgba(70, 236, 255, .72));
-      z-index: 2;
-    }}
-    .body-map circle {{
-      fill: #70f4ff;
-      stroke: #ffffff;
-      stroke-width: .9;
-    }}
-    .body-map path {{
-      fill: none;
-      stroke: rgba(130, 245, 255, .92);
-      stroke-width: 2.2;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-    }}
-    .body-map .energy-line {{
-      stroke: #ffec64;
-      stroke-width: 2.5;
-      stroke-dasharray: 4 3;
-    }}
-    .body-map .ground-arrow {{
-      stroke: #ffcc35;
-      stroke-width: 3;
     }}
     .lab-badge {{
       position: absolute;
@@ -1822,6 +1857,15 @@ def render_html(data: dict, analysis_path: Path, outdir: Path) -> str:
       color: #c8d5ea;
       font-size: 14px;
       line-height: 1.55;
+    }}
+    .kinetic-data .tracking-note {{
+      margin-top: -3px;
+      padding: 9px 10px;
+      border-radius: 9px;
+      background: rgba(83, 183, 255, .10);
+      border: 1px solid rgba(108, 202, 255, .20);
+      color: #b9d9f7;
+      font-size: 11px;
     }}
     .lab-stats {{
       display: grid;
@@ -2465,7 +2509,8 @@ def render_html(data: dict, analysis_path: Path, outdir: Path) -> str:
       min-height: 244px;
       border-color: rgba(120, 177, 255, .34);
     }}
-    .kinetic-visual > img {{
+    .kinetic-visual > img,
+    .kinetic-visual > video {{
       min-height: 244px;
     }}
     .kinetic-data {{
@@ -2539,13 +2584,13 @@ def render_html(data: dict, analysis_path: Path, outdir: Path) -> str:
       .time-badge {{ width: 49px; font-size: 11px; }}
       .kinetic-lab {{ grid-template-columns: 1fr; gap: 10px; }}
       .kinetic-visual {{ min-height: 218px; border-radius: 13px; }}
-      .kinetic-visual > img {{ min-height: 218px; }}
+      .kinetic-visual > img, .kinetic-visual > video {{ min-height: 218px; }}
       .kinetic-visual::after {{ inset: 10px; border-radius: 12px; }}
-      .body-map {{ inset: 8% 8% 8% 8%; width: 84%; height: 84%; }}
       .lab-badge {{ left: 14px; top: 13px; font-size: 11px; padding: 6px 9px; }}
       .kinetic-data {{ padding: 14px; border-radius: 13px; text-align: center; }}
       .kinetic-data h3 {{ font-size: 17px; }}
       .kinetic-data p {{ font-size: 12px; }}
+      .kinetic-data .tracking-note {{ font-size: 10px; }}
       .lab-stats {{ grid-template-columns: repeat(2, 1fr); gap: 10px; text-align: left; }}
       .lab-stat strong {{ font-size: 16px; }}
       .lab-chain-grid {{ grid-template-columns: repeat(2, 1fr); gap: 8px; }}

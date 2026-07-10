@@ -115,7 +115,24 @@ Use the active Python if the packages already exist. Do not install globally unl
    - The script writes full-frame overlay, crop overlay, comparison image, and JSON metadata.
    - Put the resulting paths in `analysis.json` under `pose_analysis`.
 
-7. Create slow-motion phase clips when requested or useful.
+7. Create a body-locked kinetic-chain motion clip for mechanics-heavy reports.
+   - Use a clean 0.8-2.0 second swing clip where the target player is readable. Crop tightly enough that the player occupies a useful part of the frame.
+   - Run with a MediaPipe model when available; on macOS, `auto` also attempts the offline Apple Vision backend:
+     ```bash
+     python3 <skill-root>/scripts/pose_video_overlay.py <clean-swing-clip> \
+       --outdir <run-folder>/generated_assets/kinetic_motion \
+       --crop x1,y1,x2,y2 --model <pose_landmarker.task>
+     ```
+   - If automatic pose detection cannot meet the minimum frame-coverage threshold, do not display a fixed generic skeleton. Either choose a clearer/tighter clip or calibrate named body points on one inspected key frame and use the optical-flow fallback:
+     ```bash
+     python3 <skill-root>/scripts/pose_video_overlay.py <clean-swing-clip> \
+       --outdir <run-folder>/generated_assets/kinetic_motion \
+       --crop x1,y1,x2,y2 --backend tracked-seed --seed <seed-points.json>
+     ```
+   - Store the generated clip, poster, backend, tracked ratio, note, and limitations in `analysis.json` under `kinetic_motion`.
+   - Treat `manual_seed_optical_flow` as a visual timing aid, not pose-estimation or quantitative joint-angle evidence.
+
+8. Create slow-motion phase clips when requested or useful.
    - Use early/middle/late representative swings, preferably selected from contact sheets rather than raw thirds.
    - Run:
      ```bash
@@ -126,7 +143,7 @@ Use the active Python if the packages already exist. Do not install globally unl
      ```
    - Merge `swing_clips/swing_clips.json` phase paths into `analysis.json`.
 
-8. Write `analysis.json`.
+9. Write `analysis.json`.
    - Follow `references/report-schema.md`.
    - Read `references/analysis-checklist.md` before writing coaching claims.
    - Read `references/scoring-rubric.md` before writing `score`, `action_score`, `ability_radar`, `scoring`, or `swing_speed`.
@@ -149,7 +166,7 @@ Use the active Python if the packages already exist. Do not install globally unl
      - next practice
      - training prescription
 
-9. Render the report.
+10. Render the report.
    - Run:
      ```bash
      python3 <skill-root>/scripts/render_tennis_report.py <run-folder>/analysis.json --outdir <run-folder>/report --pdf --png
@@ -177,6 +194,15 @@ Skeleton overlays are not enough for:
 - injury or medical diagnosis
 
 State uncertainty when the player is small, blurred, occluded, or partly outside the frame. Treat pose output as an evidence layer, not the whole analysis.
+
+## Kinetic Motion Guidance
+
+- Put joint markers and segment lines on the detected/tracked body, not at fixed report coordinates.
+- Update marker positions frame by frame. Highlight the active transfer segment from feet and knees through hips, trunk, arm, and wrist/racket-side release using actual landmark motion.
+- Require a usable detection/tracking ratio before publishing the dynamic overlay. If coverage is below the threshold, omit the animated skeleton and show the original key frame with an explicit evidence note.
+- Keep video text minimal. Put coaching conclusions and caveats below the video in report copy.
+- Do not call a 2D overlay force, torque, joint load, exact racket speed, or precise 3D rotation measurement.
+- For manual optical-flow fallback, disclose that the points were calibrated on a key frame and tracked in 2D.
 
 ## Rally Segmentation Guidance
 
@@ -219,6 +245,9 @@ Deliver these files when feasible:
 - `contact_sheets/*.jpg`
 - `candidate_frames/*.jpg`
 - `generated_assets/*pose*.jpg` when pose is enabled
+- `generated_assets/kinetic_motion/kinetic_chain_overlay.mp4` when dynamic kinetic-chain tracking passes quality checks
+- `generated_assets/kinetic_motion/kinetic_chain_poster.jpg`
+- `generated_assets/kinetic_motion/kinetic_chain_overlay.json`
 - `swing_clips/*/swing_slow_annotated.mp4` when slow motion is enabled
 - `swing_clips/*/freeze_annotated.jpg`
 - `analysis.json`
