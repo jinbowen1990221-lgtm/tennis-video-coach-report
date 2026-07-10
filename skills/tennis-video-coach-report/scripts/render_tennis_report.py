@@ -1281,6 +1281,114 @@ def render_chain_steps(data: dict) -> str:
     return "".join(rows)
 
 
+def kinetic_lab_frame(data: dict) -> str:
+    phase = selected_issue_phase(data)
+    return (
+        phase.get("freeze_frame")
+        or phase.get("frame")
+        or data.get("top_review_poster")
+        or data.get("cover_frame")
+        or ""
+    )
+
+
+def kinetic_lab_stats(data: dict) -> list[tuple[str, str, int]]:
+    metrics = dict(report_metrics(data))
+    speed = swing_speed_model(data)
+    speed_score = score_value(speed.get("score")) or metrics.get("挥速释放", 0)
+    chain_score = metrics.get("动力链", 0)
+    timing_score = metrics.get("击球时机", 0)
+    stability_score = metrics.get("身体稳定", 0)
+    return [
+        ("挥速释放", f"{speed_score}/100", int(speed_score)),
+        ("击球时机", f"{timing_score}/100", int(timing_score)),
+        ("动力链", f"{chain_score}/100", int(chain_score)),
+        ("稳定性", f"{stability_score}/100", int(stability_score)),
+    ]
+
+
+def render_kinetic_lab(data: dict, analysis_dir: Path, asset_dir: Path) -> str:
+    frame = rel_asset(kinetic_lab_frame(data), analysis_dir, asset_dir)
+    chain = data.get("kinetic_chain") or {}
+    phases = data.get("phase_review") or data.get("phase_reviews") or []
+    phase = selected_issue_phase(data)
+    summary = first_text(
+        [chain.get("summary"), phase.get("issue"), phase.get("change"), data.get("one_liner")],
+        "动力链分析会把脚步、髋躯干、手臂拍头和回位连接到同一段动作证据上。",
+    )
+    stats = "".join(
+        f"""
+          <div class="lab-stat">
+            <span>{esc(label)}</span>
+            <strong>{esc(value)}</strong>
+            <i><b style="width:{max(0, min(100, score))}%"></b></i>
+          </div>
+        """
+        for label, value, score in kinetic_lab_stats(data)
+    )
+    chain_cards = "".join(
+        f"""
+          <div class="lab-chain-card {esc(level)}">
+            <span>{index}</span>
+            <strong>{esc(label)}</strong>
+            <small>{esc(cue)}</small>
+          </div>
+        """
+        for index, (label, level, cue) in enumerate(chain_steps(data), start=1)
+    )
+    thumbs = []
+    for item in phases[:4]:
+        thumb = rel_asset(item.get("freeze_frame") or item.get("frame"), analysis_dir, asset_dir)
+        if thumb:
+            thumbs.append(f"""
+              <figure>
+                <img src="{esc(thumb)}" alt="{esc(item.get("label", "动作片段"))}">
+                <figcaption>{esc(item.get("label", "片段"))}</figcaption>
+              </figure>
+            """)
+    if not thumbs and frame:
+        thumbs.append(f"""
+          <figure>
+            <img src="{esc(frame)}" alt="动力链关键帧">
+            <figcaption>关键帧</figcaption>
+          </figure>
+        """)
+    media = image_tag(frame, "动力链关键帧") if frame else '<div class="kinetic-empty">暂无关键帧</div>'
+    return f"""
+      <section class="panel">
+        <div class="section-body">
+          <h2 class="section-title"><span class="title-icon">{icon_svg("chain")}</span>动力链分析</h2>
+          <div class="kinetic-lab">
+            <div class="kinetic-visual">
+              {media}
+              <svg class="body-map" viewBox="0 0 100 100" aria-hidden="true">
+                <path class="energy-line" d="M23 79 C36 72 45 63 49 50 C53 39 60 31 72 22"/>
+                <path class="ground-arrow" d="M23 84 C38 92 56 89 72 79"/>
+                <circle cx="50" cy="22" r="4"/>
+                <circle cx="43" cy="36" r="3.5"/>
+                <circle cx="59" cy="36" r="3.5"/>
+                <circle cx="50" cy="49" r="4"/>
+                <circle cx="40" cy="61" r="3.5"/>
+                <circle cx="61" cy="62" r="3.5"/>
+                <circle cx="31" cy="80" r="3.5"/>
+                <circle cx="72" cy="80" r="3.5"/>
+                <path d="M50 26 L50 49 M43 36 L50 49 L59 36 M50 49 L40 61 L31 80 M50 49 L61 62 L72 80"/>
+              </svg>
+              <div class="lab-badge">AI 动作链</div>
+            </div>
+            <aside class="kinetic-data">
+              <h3>动作分析</h3>
+              <p>{esc(summary)}</p>
+              <div class="lab-stats">{stats}</div>
+            </aside>
+          </div>
+          <div class="lab-chain-grid">{chain_cards}</div>
+          <div class="lab-thumbs">{''.join(thumbs)}</div>
+        </div>
+      </section>
+    """
+
+
 def top_review_media(data: dict, analysis_dir: Path, asset_dir: Path) -> tuple[str, str, dict]:
     phase = selected_issue_phase(data)
     video = rel_media(
@@ -1611,6 +1719,205 @@ def render_html(data: dict, analysis_path: Path, outdir: Path) -> str:
       color: #b9c4d6;
       font-size: 11px;
       line-height: 1.35;
+    }}
+    .kinetic-lab {{
+      display: grid;
+      grid-template-columns: 1.25fr .85fr;
+      gap: 14px;
+      align-items: stretch;
+      margin-bottom: 14px;
+    }}
+    .kinetic-visual {{
+      position: relative;
+      min-height: 280px;
+      overflow: hidden;
+      border-radius: 18px;
+      background:
+        radial-gradient(circle at 48% 44%, rgba(67, 215, 255, .24), transparent 32%),
+        linear-gradient(135deg, rgba(23, 31, 56, .94), rgba(60, 38, 86, .82));
+      border: 1px solid rgba(177, 211, 255, .22);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 16px 34px rgba(0,0,0,.22);
+    }}
+    .kinetic-visual > img {{
+      width: 100%;
+      height: 100%;
+      min-height: 280px;
+      display: block;
+      object-fit: cover;
+      filter: saturate(1.06) contrast(1.02) brightness(.84);
+    }}
+    .kinetic-visual::after {{
+      content: "";
+      position: absolute;
+      inset: 16px;
+      border: 1px solid rgba(218, 231, 255, .55);
+      border-radius: 16px;
+      background: linear-gradient(135deg, rgba(255,255,255,.12), rgba(255,255,255,.02));
+      pointer-events: none;
+    }}
+    .body-map {{
+      position: absolute;
+      inset: 9% 11% 8% 13%;
+      width: 76%;
+      height: 83%;
+      overflow: visible;
+      filter: drop-shadow(0 0 10px rgba(70, 236, 255, .72));
+      z-index: 2;
+    }}
+    .body-map circle {{
+      fill: #70f4ff;
+      stroke: #ffffff;
+      stroke-width: .9;
+    }}
+    .body-map path {{
+      fill: none;
+      stroke: rgba(130, 245, 255, .92);
+      stroke-width: 2.2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }}
+    .body-map .energy-line {{
+      stroke: #ffec64;
+      stroke-width: 2.5;
+      stroke-dasharray: 4 3;
+    }}
+    .body-map .ground-arrow {{
+      stroke: #ffcc35;
+      stroke-width: 3;
+    }}
+    .lab-badge {{
+      position: absolute;
+      left: 22px;
+      top: 20px;
+      z-index: 3;
+      padding: 7px 11px;
+      border-radius: 999px;
+      background: rgba(11, 20, 38, .62);
+      border: 1px solid rgba(255,255,255,.2);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 900;
+    }}
+    .kinetic-empty {{
+      min-height: 280px;
+      display: grid;
+      place-items: center;
+      color: rgba(255,255,255,.72);
+      font-weight: 900;
+    }}
+    .kinetic-data {{
+      border-radius: 18px;
+      padding: 18px;
+      background: rgba(17, 24, 43, .82);
+      border: 1px solid rgba(177, 211, 255, .18);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
+    }}
+    .kinetic-data h3 {{
+      margin: 0 0 8px;
+      color: #fff;
+      font-size: 22px;
+    }}
+    .kinetic-data p {{
+      margin: 0 0 14px;
+      color: #c8d5ea;
+      font-size: 14px;
+      line-height: 1.55;
+    }}
+    .lab-stats {{
+      display: grid;
+      gap: 11px;
+    }}
+    .lab-stat span, .lab-stat strong {{
+      display: block;
+    }}
+    .lab-stat span {{
+      color: #9fb0cb;
+      font-size: 12px;
+      font-weight: 850;
+      margin-bottom: 2px;
+    }}
+    .lab-stat strong {{
+      color: #ffffff;
+      font-size: 19px;
+      margin-bottom: 6px;
+    }}
+    .lab-stat i {{
+      display: block;
+      height: 7px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.12);
+      overflow: hidden;
+    }}
+    .lab-stat i b {{
+      display: block;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #7ce8ff, #ffdf47);
+    }}
+    .lab-chain-grid {{
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 12px;
+    }}
+    .lab-chain-card {{
+      min-height: 104px;
+      padding: 13px;
+      border-radius: 15px;
+      background: rgba(20, 25, 39, .72);
+      border: 1px solid rgba(255,255,255,.08);
+    }}
+    .lab-chain-card span {{
+      display: grid;
+      place-items: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #2aa6ff;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 950;
+      margin-bottom: 8px;
+    }}
+    .lab-chain-card.good span {{ background: #27d96d; }}
+    .lab-chain-card.watch span {{ background: #ffad22; }}
+    .lab-chain-card.fix span {{ background: #ff4254; }}
+    .lab-chain-card strong {{
+      display: block;
+      color: #fff;
+      font-size: 14px;
+      line-height: 1.3;
+      margin-bottom: 5px;
+    }}
+    .lab-chain-card small {{
+      color: #b8c4d8;
+      font-size: 11px;
+      line-height: 1.35;
+    }}
+    .lab-thumbs {{
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }}
+    .lab-thumbs figure {{
+      margin: 0;
+      overflow: hidden;
+      border-radius: 12px;
+      background: rgba(20, 25, 39, .72);
+      border: 1px solid rgba(255,255,255,.08);
+    }}
+    .lab-thumbs img {{
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      object-fit: cover;
+      display: block;
+    }}
+    .lab-thumbs figcaption {{
+      padding: 6px 8px;
+      color: #d9e4f4;
+      font-size: 11px;
+      font-weight: 850;
+      text-align: center;
     }}
     .section-title {{
       display: flex;
@@ -2151,6 +2458,36 @@ def render_html(data: dict, analysis_path: Path, outdir: Path) -> str:
       color: #66718c;
       border: 1px solid #e5efff;
     }}
+    .kinetic-lab {{
+      gap: 12px;
+    }}
+    .kinetic-visual {{
+      min-height: 244px;
+      border-color: rgba(120, 177, 255, .34);
+    }}
+    .kinetic-visual > img {{
+      min-height: 244px;
+    }}
+    .kinetic-data {{
+      background: linear-gradient(180deg, rgba(41, 53, 86, .94), rgba(26, 35, 61, .94));
+    }}
+    .lab-chain-card {{
+      background: #f7f9ff;
+      border-color: #edf2ff;
+    }}
+    .lab-chain-card strong {{
+      color: #344265;
+    }}
+    .lab-chain-card small {{
+      color: #66718c;
+    }}
+    .lab-thumbs figure {{
+      background: #f7f9ff;
+      border-color: #edf2ff;
+    }}
+    .lab-thumbs figcaption {{
+      color: #496cae;
+    }}
     .speed-score {{
       background:
         radial-gradient(circle at 50% 50%, #fff 0 54%, transparent 55%),
@@ -2200,6 +2537,22 @@ def render_html(data: dict, analysis_path: Path, outdir: Path) -> str:
       .focus-item h4, .moment-dark h4 {{ font-size: 14px; }}
       .metric-row {{ grid-template-columns: 72px 1fr 28px; font-size: 12px; }}
       .time-badge {{ width: 49px; font-size: 11px; }}
+      .kinetic-lab {{ grid-template-columns: 1fr; gap: 10px; }}
+      .kinetic-visual {{ min-height: 218px; border-radius: 13px; }}
+      .kinetic-visual > img {{ min-height: 218px; }}
+      .kinetic-visual::after {{ inset: 10px; border-radius: 12px; }}
+      .body-map {{ inset: 8% 8% 8% 8%; width: 84%; height: 84%; }}
+      .lab-badge {{ left: 14px; top: 13px; font-size: 11px; padding: 6px 9px; }}
+      .kinetic-data {{ padding: 14px; border-radius: 13px; text-align: center; }}
+      .kinetic-data h3 {{ font-size: 17px; }}
+      .kinetic-data p {{ font-size: 12px; }}
+      .lab-stats {{ grid-template-columns: repeat(2, 1fr); gap: 10px; text-align: left; }}
+      .lab-stat strong {{ font-size: 16px; }}
+      .lab-chain-grid {{ grid-template-columns: repeat(2, 1fr); gap: 8px; }}
+      .lab-chain-card {{ min-height: 92px; padding: 11px; }}
+      .lab-chain-card strong {{ font-size: 13px; }}
+      .lab-chain-card small {{ font-size: 10px; }}
+      .lab-thumbs {{ grid-template-columns: repeat(3, 1fr); }}
       .speed-hero {{ grid-template-columns: 1fr; gap: 12px; padding: 14px; text-align: center; justify-items: center; }}
       .speed-score {{ width: 76px; height: 76px; justify-self: center; }}
       .speed-score strong {{ font-size: 23px; }}
@@ -2257,6 +2610,8 @@ def render_html(data: dict, analysis_path: Path, outdir: Path) -> str:
         </div>
       </div>
     </section>
+
+    {render_kinetic_lab(data, analysis_dir, asset_dir)}
 
     <section class="panel">
       <div class="section-body">
