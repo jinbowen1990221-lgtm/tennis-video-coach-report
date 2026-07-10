@@ -282,8 +282,8 @@ def hitting_side(points: dict, previous: dict) -> str:
 
 def draw_glow_line(canvas: np.ndarray, start: tuple[int, int], end: tuple[int, int], color: tuple[int, int, int], width: int) -> None:
     overlay = canvas.copy()
-    cv2.line(overlay, start, end, color, width * 4, cv2.LINE_AA)
-    cv2.addWeighted(overlay, 0.18, canvas, 0.82, 0, canvas)
+    cv2.line(overlay, start, end, color, max(width + 2, width * 3), cv2.LINE_AA)
+    cv2.addWeighted(overlay, 0.09, canvas, 0.91, 0, canvas)
     cv2.line(canvas, start, end, color, width, cv2.LINE_AA)
 
 
@@ -301,27 +301,27 @@ def draw_overlay(frame: np.ndarray, pose: dict, previous_pose: dict, frame_index
 
     for a, b in CONNECTIONS:
         if a in points and b in points:
-            draw_glow_line(output, points[a][:2], points[b][:2], (245, 222, 79), max(2, int(scale * 0.018)))
+            draw_glow_line(output, points[a][:2], points[b][:2], (245, 222, 79), max(1, int(scale * 0.010)))
 
     stage_edge = [1, 2, 3, 5][active_index]
     for index, (a, b) in enumerate(zip(chain, chain[1:])):
         if a not in points or b not in points:
             continue
         color = (53, 222, 255) if index <= stage_edge else (255, 238, 129)
-        line_width = max(3, int(scale * (0.026 if index <= stage_edge else 0.014)))
+        line_width = max(2, int(scale * (0.015 if index <= stage_edge else 0.010)))
         draw_glow_line(output, points[a][:2], points[b][:2], color, line_width)
 
-    pulse = 1.0 + 0.28 * math.sin(frame_index * 0.72)
+    pulse = 1.0 + 0.18 * math.sin(frame_index * 0.72)
     stage_names = GROUPS[active]
     for name, (x, y, _) in points.items():
         is_active = name in stage_names
-        radius = max(4, int(scale * (0.038 if is_active else 0.026) * pulse))
+        radius = max(3, int(scale * (0.022 if is_active else 0.017) * pulse))
         color = (41, 210, 255) if is_active else (95, 246, 255)
         glow = output.copy()
-        cv2.circle(glow, (x, y), radius * 3, color, -1, cv2.LINE_AA)
-        cv2.addWeighted(glow, 0.14, output, 0.86, 0, output)
+        cv2.circle(glow, (x, y), radius * 2, color, -1, cv2.LINE_AA)
+        cv2.addWeighted(glow, 0.08, output, 0.92, 0, output)
         cv2.circle(output, (x, y), radius, color, -1, cv2.LINE_AA)
-        cv2.circle(output, (x, y), radius + 2, (255, 255, 255), 1, cv2.LINE_AA)
+        cv2.circle(output, (x, y), radius + 1, (255, 255, 255), 1, cv2.LINE_AA)
 
     confidence = min(1.0, len(points) / 13.0)
     return output, confidence
